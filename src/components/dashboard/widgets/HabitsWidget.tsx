@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
 import type { Habit, HabitCompletion } from "@/lib/types";
@@ -18,7 +19,9 @@ export function HabitsWidget({ habits, completions }: HabitsWidgetProps) {
 
   return (
     <Card>
-      <h3 className="text-h3 mb-3">Habits</h3>
+      <Link href="/habits" className="text-h3 mb-3 block hover:text-tuscan transition-fast w-fit">
+        Habits
+      </Link>
       {habits.length === 0 ? (
         <p className="text-small text-graphite py-4 text-center">No habits yet?</p>
       ) : (

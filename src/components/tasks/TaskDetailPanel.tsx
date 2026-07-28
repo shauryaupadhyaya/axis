@@ -137,7 +137,9 @@ export function TaskDetailPanel({ task, onClose }: { task: Task | null; onClose:
                 key={p}
                 onClick={() => startTransition(() => updateTask(task.id, { priority: p }))}
                 className={`px-3 py-1.5 rounded-md text-small capitalize border transition-fast ${
-                  task.priority === p ? "bg-carbon text-white border-carbon" : "border-alabaster hover:bg-bg"
+                  task.priority === p
+                    ? "bg-carbon text-white border-carbon dark:bg-tuscan dark:text-carbon dark:border-tuscan"
+                    : "border-alabaster hover:bg-bg"
                 }`}
               >
                 {p}

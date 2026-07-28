@@ -65,7 +65,7 @@ export function CalendarView({ tasks, workouts, exams, studySessions, habits, ha
               key={v}
               onClick={() => setView(v)}
               className={`px-3 py-1.5 rounded-md text-small capitalize transition-fast ${
-                view === v ? "bg-carbon text-white" : "hover:bg-bg"
+                view === v ? "bg-carbon text-white dark:bg-tuscan dark:text-carbon" : "hover:bg-bg"
               }`}
             >
               {v}

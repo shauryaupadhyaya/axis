@@ -133,6 +133,26 @@ export interface WorkoutSet {
   logged_at: string | null;
 }
 
+export interface NoteFolder {
+  id: string;
+  user_id: string;
+  name: string;
+  position: number;
+}
+
+export interface Note {
+  id: string;
+  user_id: string;
+  folder_id: string | null;
+  chapter_id: string | null;
+  title: string;
+  content: string;
+  tags: string[];
+  is_favorite: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export type SkincarePeriod = "am" | "pm";
 
 export interface SkincareStep {

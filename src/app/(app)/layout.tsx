@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/nav/Sidebar";
 import { MobileTabBar } from "@/components/nav/MobileTabBar";
+import { Fab } from "@/components/ui/Fab";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,6 +8,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <main className="flex-1 md:pl-[60px] lg:pl-60 pb-[60px] md:pb-0">{children}</main>
       <MobileTabBar />
+      <Fab />
     </div>
   );
 }

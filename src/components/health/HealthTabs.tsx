@@ -4,6 +4,7 @@ import { useState } from "react";
 import { WorkoutsTab } from "./WorkoutsTab";
 import { WaterTab } from "./WaterTab";
 import { SkincareTab } from "./SkincareTab";
+import { ProgressPhotos } from "./ProgressPhotos";
 import type {
   SkincareCompletion,
   SkincareStep,
@@ -13,7 +14,7 @@ import type {
   WorkoutSet,
 } from "@/lib/types";
 
-type Tab = "workouts" | "water" | "skincare";
+type Tab = "workouts" | "water" | "skincare" | "photos";
 
 interface HealthTabsProps {
   workouts: Workout[];
@@ -33,12 +34,12 @@ export function HealthTabs(props: HealthTabsProps) {
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-h1">Health</h1>
         <div className="flex gap-1 border border-alabaster rounded-lg p-1">
-          {(["workouts", "water", "skincare"] as Tab[]).map((t) => (
+          {(["workouts", "water", "skincare", "photos"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={`px-3 py-1.5 rounded-md text-small capitalize transition-fast ${
-                tab === t ? "bg-carbon text-white" : "hover:bg-bg"
+                tab === t ? "bg-carbon text-white dark:bg-tuscan dark:text-carbon" : "hover:bg-bg"
               }`}
             >
               {t}
@@ -60,6 +61,7 @@ export function HealthTabs(props: HealthTabsProps) {
       {tab === "skincare" && (
         <SkincareTab steps={props.skincareSteps} completions={props.skincareCompletions} />
       )}
+      {tab === "photos" && <ProgressPhotos />}
     </div>
   );
 }

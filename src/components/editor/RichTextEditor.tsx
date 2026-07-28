@@ -112,7 +112,7 @@ function ToolbarButton({
       onClick={onClick}
       className={cn(
         "w-7 h-7 rounded-md flex items-center justify-center transition-fast",
-        active ? "bg-carbon text-white" : "hover:bg-bg"
+        active ? "bg-carbon text-white dark:bg-tuscan dark:text-carbon" : "hover:bg-bg"
       )}
     >
       {children}

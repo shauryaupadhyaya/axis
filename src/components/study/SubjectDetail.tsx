@@ -57,7 +57,7 @@ export function SubjectDetail({ exam, chapters, studySessions }: SubjectDetailPr
             key={t}
             onClick={() => setTab(t)}
             className={`px-3 py-1.5 rounded-md text-small capitalize transition-fast ${
-              tab === t ? "bg-carbon text-white" : "hover:bg-bg"
+              tab === t ? "bg-carbon text-white dark:bg-tuscan dark:text-carbon" : "hover:bg-bg"
             }`}
           >
             {t}

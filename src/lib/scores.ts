@@ -23,6 +23,23 @@ export function computeStreak(completions: HabitCompletion[], today = new Date()
   return streak;
 }
 
+/** Longest historical run of consecutive completed days, across all completions. */
+export function computeBestStreak(completions: HabitCompletion[]): number {
+  const completedDates = [...new Set(completions.filter((c) => c.status === "completed").map((c) => c.completed_at))].sort();
+  if (completedDates.length === 0) return 0;
+
+  let best = 1;
+  let current = 1;
+  for (let i = 1; i < completedDates.length; i++) {
+    const prev = new Date(completedDates[i - 1]);
+    const curr = new Date(completedDates[i]);
+    const dayDiff = Math.round((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+    current = dayDiff === 1 ? current + 1 : 1;
+    best = Math.max(best, current);
+  }
+  return best;
+}
+
 export function toISODate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }

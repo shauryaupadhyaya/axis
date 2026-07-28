@@ -14,7 +14,7 @@ export interface CalendarEvent {
 }
 
 const COLORS: Record<CalendarEventType, { border: string; chip: string }> = {
-  task: { border: "border-l-carbon", chip: "bg-carbon text-white" },
+  task: { border: "border-l-carbon dark:border-l-tuscan", chip: "bg-carbon text-white dark:bg-tuscan dark:text-carbon" },
   habit: { border: "border-l-success", chip: "bg-success text-white" },
   exam: { border: "border-l-danger", chip: "bg-danger text-white" },
   workout: { border: "border-l-info", chip: "bg-info text-white" },

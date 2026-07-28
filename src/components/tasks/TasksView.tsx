@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { DndBoard, type DndColumn } from "@/components/dnd/DndBoard";
 import { MonthGrid, type MonthGridEvent } from "@/components/calendar/MonthGrid";
 import { TaskRow } from "./TaskRow";
@@ -11,7 +13,7 @@ import { TaskCard } from "./TaskCard";
 import { TaskDetailPanel } from "./TaskDetailPanel";
 import type { Task, TaskBoardStatus } from "@/lib/types";
 import { taskBoardStatus } from "@/lib/types";
-import { createTask, moveTaskBoardStatus } from "@/app/(app)/tasks/actions";
+import { createTask, moveTaskBoardStatus, updateTask } from "@/app/(app)/tasks/actions";
 
 type View = "list" | "board" | "timeline";
 
@@ -25,8 +27,9 @@ const PRIORITY_BORDER: Record<Task["priority"], string> = {
 export function TasksView({ tasks }: { tasks: Task[] }) {
   const [view, setView] = useState<View>("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
+  const [newDueDate, setNewDueDate] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const selectedTask = tasks.find((t) => t.id === selectedId) ?? null;
@@ -53,11 +56,15 @@ export function TasksView({ tasks }: { tasks: Task[] }) {
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!newTitle.trim()) return;
-    startTransition(() => {
-      void createTask(newTitle);
+    const title = newTitle;
+    const dueDate = newDueDate;
+    startTransition(async () => {
+      const id = await createTask(title);
+      if (id && dueDate) await updateTask(id, { due_at: dueDate });
     });
     setNewTitle("");
-    setAdding(false);
+    setNewDueDate(null);
+    setAddOpen(false);
   }
 
   return (
@@ -69,23 +76,39 @@ export function TasksView({ tasks }: { tasks: Task[] }) {
               key={v}
               onClick={() => setView(v)}
               className={`px-3 py-1.5 rounded-md text-small capitalize transition-fast ${
-                view === v ? "bg-carbon text-white" : "hover:bg-bg"
+                view === v ? "bg-carbon text-white dark:bg-tuscan dark:text-carbon" : "hover:bg-bg"
               }`}
             >
               {v}
             </button>
           ))}
         </div>
-        <Button onClick={() => setAdding((v) => !v)} className="flex items-center gap-1.5">
+        <Button onClick={() => setAddOpen(true)} className="flex items-center gap-1.5">
           <Plus size={16} /> New task
         </Button>
       </div>
 
-      {adding && (
-        <form onSubmit={handleAdd} className="mb-5 max-w-sm">
-          <Input autoFocus placeholder="Task title…" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
+      <Modal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        title="New task"
+        footer={
+          <Button type="submit" form="new-task-form" className="w-full">
+            Create task
+          </Button>
+        }
+      >
+        <form id="new-task-form" onSubmit={handleAdd} className="flex flex-col gap-4">
+          <Input
+            autoFocus
+            label="Title"
+            placeholder="Task title…"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+          />
+          <DatePicker label="Due date (optional)" value={newDueDate} onChange={setNewDueDate} />
         </form>
-      )}
+      </Modal>
 
       {view === "list" && (
         <div className="border border-alabaster rounded-xl p-2">

@@ -1,4 +1,5 @@
 import { Search, Sparkles, Bell } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 function greeting(hour: number) {
   if (hour < 12) return "Good morning";
@@ -23,6 +24,7 @@ export function HeaderBar({ name }: { name: string }) {
         <p className="text-small text-graphite">{dateLabel}</p>
       </div>
       <div className="flex items-center gap-2 shrink-0">
+        <ThemeToggle />
         {[
           { icon: Search, label: "Search" },
           { icon: Sparkles, label: "Assistant" },
@@ -35,7 +37,7 @@ export function HeaderBar({ name }: { name: string }) {
             title="Coming soon"
             className="w-9 h-9 rounded-md border border-alabaster flex items-center justify-center opacity-50 cursor-not-allowed"
           >
-            <Icon size={18} className="text-carbon" />
+            <Icon size={18} className="text-text" />
           </button>
         ))}
       </div>

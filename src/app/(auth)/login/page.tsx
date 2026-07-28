@@ -43,7 +43,7 @@ export default function LoginPage() {
         </form>
 
         <button
-          className="text-small text-graphite mt-4 mx-auto block hover:text-carbon transition-fast"
+          className="text-small text-graphite mt-4 mx-auto block hover:text-tuscan transition-fast"
           onClick={() => setMode(mode === "sign-in" ? "sign-up" : "sign-in")}
         >
           {mode === "sign-in" ? "Need an account? Sign up" : "Already have an account? Sign in"}
