@@ -1,6 +1,15 @@
-import type { Exam, Habit, HabitCompletion, StudySession, Task, Workout } from "@/lib/types";
+import type {
+  CalendarEventRow,
+  Exam,
+  Habit,
+  HabitCompletion,
+  Homework,
+  StudySession,
+  Task,
+  Workout,
+} from "@/lib/types";
 
-export type CalendarEventType = "task" | "habit" | "exam" | "workout" | "study";
+export type CalendarEventType = "task" | "habit" | "exam" | "workout" | "study" | "homework" | "event" | "birthday";
 
 export interface CalendarEvent {
   id: string;
@@ -19,6 +28,9 @@ const COLORS: Record<CalendarEventType, { border: string; chip: string }> = {
   exam: { border: "border-l-danger", chip: "bg-danger text-white" },
   workout: { border: "border-l-info", chip: "bg-info text-white" },
   study: { border: "border-l-tuscan", chip: "bg-tuscan text-carbon" },
+  homework: { border: "border-l-warning", chip: "bg-warning text-white" },
+  event: { border: "border-l-graphite", chip: "bg-graphite text-white" },
+  birthday: { border: "border-l-pink-500", chip: "bg-pink-500 text-white" },
 };
 
 interface BuildCalendarEventsInput {
@@ -28,6 +40,15 @@ interface BuildCalendarEventsInput {
   studySessions: StudySession[];
   habits: Habit[];
   habitCompletions: HabitCompletion[];
+  homework?: Homework[];
+  calendarEvents?: CalendarEventRow[];
+}
+
+/** Projects a birthday/recurring date onto the year of `referenceDate` (or the next occurrence if already past). */
+function projectRecurringDate(originalDate: Date, referenceDate: Date): Date {
+  const projected = new Date(originalDate);
+  projected.setFullYear(referenceDate.getFullYear());
+  return projected;
 }
 
 /**
@@ -43,8 +64,40 @@ export function buildCalendarEvents({
   studySessions,
   habits,
   habitCompletions,
+  homework = [],
+  calendarEvents = [],
 }: BuildCalendarEventsInput): CalendarEvent[] {
   const events: CalendarEvent[] = [];
+  const now = new Date();
+
+  for (const hw of homework) {
+    if (!hw.due_at) continue;
+    events.push({
+      id: `homework-${hw.id}`,
+      type: "homework",
+      refId: hw.id,
+      title: hw.title,
+      date: new Date(hw.due_at),
+      colorClass: COLORS.homework.border,
+      chipClass: COLORS.homework.chip,
+      reschedulable: true,
+    });
+  }
+
+  for (const ev of calendarEvents) {
+    const originalDate = new Date(`${ev.event_date}T00:00:00`);
+    const date = ev.event_type === "birthday" ? projectRecurringDate(originalDate, now) : originalDate;
+    events.push({
+      id: `${ev.event_type}-${ev.id}`,
+      type: ev.event_type,
+      refId: ev.id,
+      title: ev.title,
+      date,
+      colorClass: COLORS[ev.event_type].border,
+      chipClass: COLORS[ev.event_type].chip,
+      reschedulable: true,
+    });
+  }
 
   for (const task of tasks) {
     if (!task.due_at) continue;

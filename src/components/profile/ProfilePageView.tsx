@@ -1,14 +1,17 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { User, Trophy, BarChart3, Settings, LogOut } from "lucide-react";
+import { User, Trophy, BarChart3, Settings, LogOut, Camera } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { Toggle } from "@/components/ui/Toggle";
+import { PushToggle } from "@/components/profile/PushToggle";
 import { Button } from "@/components/ui/Button";
 import { signOut } from "@/app/(auth)/actions";
+import { updateProfile } from "@/lib/profile";
 import { cn } from "@/lib/cn";
 
 type Tab = "overview" | "statistics" | "achievements" | "settings";
@@ -16,6 +19,7 @@ type Tab = "overview" | "statistics" | "achievements" | "settings";
 interface ProfilePageViewProps {
   name: string;
   email: string;
+  avatarUrl: string | null;
   scores: {
     productivity: number;
     study: number;
@@ -45,26 +49,37 @@ const ACHIEVEMENTS = [
   { id: "skincare", name: "Skincare Champ", icon: "✨", condition: "60 days complete" },
 ];
 
-const ALL_NOTIFICATIONS = [
-  "Tasks",
-  "Habits",
-  "Exams",
-  "Workouts",
-  "Water",
-  "Skincare",
-] as const;
-
 export function ProfilePageView({
   name,
   email,
+  avatarUrl,
   scores,
   stats,
   streaks,
 }: ProfilePageViewProps) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
-  const [notifications, setNotifications] = useState<Record<string, boolean>>(
-    Object.fromEntries(ALL_NOTIFICATIONS.map((n) => [n, true]))
-  );
+  const [username, setUsername] = useState(name);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await updateProfile({ avatarFile: file });
+      router.refresh();
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  async function handleUsernameSave() {
+    if (username.trim() === name || !username.trim()) return;
+    await updateProfile({ username: username.trim() });
+    router.refresh();
+  }
 
   return (
     <div className="p-6">
@@ -97,11 +112,16 @@ export function ProfilePageView({
           {/* Profile header */}
           <Card>
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-carbon dark:bg-tuscan flex items-center justify-center">
-                <span className="text-h1 text-white dark:text-carbon">
-                  {name.charAt(0).toUpperCase()}
-                </span>
-              </div>
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt={name} className="w-16 h-16 rounded-full object-cover" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-carbon dark:bg-tuscan flex items-center justify-center">
+                  <span className="text-h1 text-white dark:text-carbon">
+                    {name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
               <div>
                 <h2 className="text-h2">{name}</h2>
                 <p className="text-small text-graphite">{email}</p>
@@ -182,6 +202,30 @@ export function ProfilePageView({
       {tab === "settings" && (
         <div className="max-w-lg flex flex-col gap-5">
           <Card>
+            <h3 className="text-h3 mb-4">Profile</h3>
+            <div className="flex items-center gap-4 mb-4">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt={name} className="w-14 h-14 rounded-full object-cover" />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-carbon dark:bg-tuscan flex items-center justify-center">
+                  <span className="text-h3 text-white dark:text-carbon">{name.charAt(0).toUpperCase()}</span>
+                </div>
+              )}
+              <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-alabaster text-small text-graphite cursor-pointer hover:bg-bg transition-fast">
+                <Camera size={14} /> {uploading ? "Uploading…" : "Change photo"}
+                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} disabled={uploading} />
+              </label>
+            </div>
+            <Input
+              label="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              onBlur={handleUsernameSave}
+            />
+          </Card>
+
+          <Card>
             <h3 className="text-h3 mb-4">Appearance</h3>
             <div className="flex items-center justify-between">
               <span className="text-body">Theme</span>
@@ -191,20 +235,7 @@ export function ProfilePageView({
 
           <Card>
             <h3 className="text-h3 mb-4">Notifications</h3>
-            {ALL_NOTIFICATIONS.map((item) => (
-              <div
-                key={item}
-                className="flex items-center justify-between py-2 border-b border-alabaster last:border-b-0"
-              >
-                <span className="text-body">{item}</span>
-                <Toggle
-                  checked={notifications[item]}
-                  onChange={(e) =>
-                    setNotifications((n) => ({ ...n, [item]: e.target.checked }))
-                  }
-                />
-              </div>
-            ))}
+            <PushToggle />
           </Card>
 
           <Card>

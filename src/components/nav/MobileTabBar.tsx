@@ -9,7 +9,10 @@ export function MobileTabBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[60px] grid grid-cols-5 bg-linen dark:bg-bg border-t border-alabaster z-[999]">
+    <nav
+      className="md:hidden fixed bottom-0 left-0 right-0 h-[60px] grid bg-linen dark:bg-bg border-t border-alabaster z-[999]"
+      style={{ gridTemplateColumns: `repeat(${NAV_ITEMS.length}, minmax(0, 1fr))` }}
+    >
       {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
         const active = pathname.startsWith(href);
         return (

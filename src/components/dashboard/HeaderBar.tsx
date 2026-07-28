@@ -1,5 +1,7 @@
-import { Search, Sparkles, Bell } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { HeaderBarActions } from "@/components/dashboard/HeaderBarActions";
+import { getAppSnapshot } from "@/lib/app-snapshot";
+import { buildNotifications } from "@/lib/notifications";
 
 function greeting(hour: number) {
   if (hour < 12) return "Good morning";
@@ -7,13 +9,16 @@ function greeting(hour: number) {
   return "Good evening";
 }
 
-export function HeaderBar({ name }: { name: string }) {
+export async function HeaderBar({ name }: { name: string }) {
   const now = new Date();
   const dateLabel = now.toLocaleDateString("en-US", {
     weekday: "long",
     day: "numeric",
     month: "long",
   });
+
+  const snapshot = await getAppSnapshot();
+  const notifications = buildNotifications(snapshot, now);
 
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between gap-4 px-6 py-4 bg-bg border-b border-alabaster">
@@ -25,21 +30,7 @@ export function HeaderBar({ name }: { name: string }) {
       </div>
       <div className="flex items-center gap-2 shrink-0">
         <ThemeToggle />
-        {[
-          { icon: Search, label: "Search" },
-          { icon: Sparkles, label: "Assistant" },
-          { icon: Bell, label: "Alerts" },
-        ].map(({ icon: Icon, label }) => (
-          <button
-            key={label}
-            aria-label={label}
-            disabled
-            title="Coming soon"
-            className="w-9 h-9 rounded-md border border-alabaster flex items-center justify-center opacity-50 cursor-not-allowed"
-          >
-            <Icon size={18} className="text-text" />
-          </button>
-        ))}
+        <HeaderBarActions notifications={notifications} />
       </div>
     </header>
   );

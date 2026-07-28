@@ -2,21 +2,23 @@
 
 import { useState } from "react";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import type { Chapter, Exam, StudySession } from "@/lib/types";
+import type { Chapter, Exam, Homework, StudySession } from "@/lib/types";
 import { daysUntil } from "@/lib/scores";
 import { SyllabusTab } from "./SyllabusTab";
 import { RevisionTab } from "./RevisionTab";
 import { HoursTab } from "./HoursTab";
+import { HomeworkTab } from "./HomeworkTab";
 
-type Tab = "syllabus" | "notes" | "revision" | "hours";
+type Tab = "syllabus" | "notes" | "revision" | "hours" | "homework";
 
 interface SubjectDetailProps {
   exam: Exam;
   chapters: Chapter[];
   studySessions: StudySession[];
+  homework: Homework[];
 }
 
-export function SubjectDetail({ exam, chapters, studySessions }: SubjectDetailProps) {
+export function SubjectDetail({ exam, chapters, studySessions, homework }: SubjectDetailProps) {
   const [tab, setTab] = useState<Tab>("syllabus");
   const readiness = exam.chapters_total > 0 ? Math.round((exam.chapters_mastered / exam.chapters_total) * 100) : 0;
   const days = daysUntil(exam.exam_date);
@@ -52,7 +54,7 @@ export function SubjectDetail({ exam, chapters, studySessions }: SubjectDetailPr
       </div>
 
       <div className="flex gap-1 border border-alabaster rounded-lg p-1 w-fit mb-5">
-        {(["syllabus", "notes", "revision", "hours"] as Tab[]).map((t) => (
+        {(["syllabus", "homework", "notes", "revision", "hours"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -66,6 +68,7 @@ export function SubjectDetail({ exam, chapters, studySessions }: SubjectDetailPr
       </div>
 
       {tab === "syllabus" && <SyllabusTab subjectId={exam.id} chapters={chapters} />}
+      {tab === "homework" && <HomeworkTab subjectId={exam.id} homework={homework} />}
       {tab === "notes" && (
         <p className="text-small text-graphite py-8 text-center">Notes aren&apos;t available yet.</p>
       )}

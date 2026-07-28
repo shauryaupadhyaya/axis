@@ -2,7 +2,54 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUserId } from "@/lib/supabase/require-user";
-import type { ChapterStatus } from "@/lib/types";
+import type { ChapterStatus, Priority } from "@/lib/types";
+
+export async function createHomework(subjectId: string, title: string) {
+  const { supabase, userId } = await requireUserId();
+  const trimmed = title.trim();
+  if (!trimmed) return null;
+  const { data, error } = await supabase
+    .from("homework")
+    .insert({ user_id: userId, subject_id: subjectId, title: trimmed })
+    .select("id")
+    .single();
+  revalidatePath(`/study/${subjectId}`);
+  revalidatePath("/calendar");
+  if (error) throw new Error(error.message);
+  return data.id as string;
+}
+
+export async function updateHomework(
+  subjectId: string,
+  homeworkId: string,
+  updates: Partial<{
+    title: string;
+    description: string;
+    due_at: string | null;
+    priority: Priority;
+    done: boolean;
+  }>
+) {
+  const { supabase, userId } = await requireUserId();
+  await supabase.from("homework").update(updates).eq("id", homeworkId).eq("user_id", userId);
+  revalidatePath(`/study/${subjectId}`);
+  revalidatePath("/calendar");
+}
+
+export async function toggleHomeworkDone(subjectId: string, homeworkId: string, done: boolean) {
+  await updateHomework(subjectId, homeworkId, { done });
+}
+
+export async function rescheduleHomework(subjectId: string, homeworkId: string, dueDateIso: string) {
+  await updateHomework(subjectId, homeworkId, { due_at: dueDateIso });
+}
+
+export async function deleteHomework(subjectId: string, homeworkId: string) {
+  const { supabase, userId } = await requireUserId();
+  await supabase.from("homework").delete().eq("id", homeworkId).eq("user_id", userId);
+  revalidatePath(`/study/${subjectId}`);
+  revalidatePath("/calendar");
+}
 
 export async function addSubject(name: string, examDate: string) {
   const { supabase, userId } = await requireUserId();

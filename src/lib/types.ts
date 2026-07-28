@@ -60,6 +60,18 @@ export interface HabitCompletion {
   status: CompletionStatus;
 }
 
+export type CalendarEventKind = "event" | "birthday";
+
+export interface CalendarEventRow {
+  id: string;
+  user_id: string;
+  title: string;
+  event_date: string;
+  event_type: CalendarEventKind;
+  notes: string | null;
+  created_at: string;
+}
+
 export interface Exam {
   id: string;
   user_id: string;
@@ -80,6 +92,18 @@ export interface Chapter {
   position: number;
   last_revised_at: string | null;
   revision_frequency_days: number;
+}
+
+export interface Homework {
+  id: string;
+  user_id: string;
+  subject_id: string;
+  title: string;
+  description: string | null;
+  due_at: string | null;
+  priority: Priority;
+  done: boolean;
+  created_at: string;
 }
 
 export interface StudySession {

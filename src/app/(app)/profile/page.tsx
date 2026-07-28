@@ -87,11 +87,13 @@ export default async function ProfilePage() {
     (user?.user_metadata?.full_name as string | undefined) ??
     user?.email?.split("@")[0] ??
     "User";
+  const avatarUrl = (user?.user_metadata?.avatar_url as string | undefined) ?? null;
 
   return (
     <ProfilePageView
       name={name}
       email={user?.email ?? ""}
+      avatarUrl={avatarUrl}
       scores={{ productivity, study, health }}
       stats={{
         studyHours: Math.round((totalStudyMinutes / 60) * 10) / 10,

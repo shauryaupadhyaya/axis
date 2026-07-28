@@ -15,16 +15,23 @@ import {
   uploadInlineImage,
   uploadTaskAttachment,
 } from "@/lib/attachments";
-import type { Priority, Task, TaskAttachment, TaskSubtask } from "@/lib/types";
+import type { Priority, Task, TaskAttachment, TaskBoardStatus, TaskSubtask } from "@/lib/types";
+import { taskBoardStatus } from "@/lib/types";
 import {
   addSubtask,
   deleteSubtask,
   deleteTask,
+  moveTaskBoardStatus,
   toggleSubtask,
   updateTask,
 } from "@/app/(app)/tasks/actions";
 
 const PRIORITIES: Priority[] = ["low", "medium", "high", "urgent"];
+const STATUSES: { value: TaskBoardStatus; label: string }[] = [
+  { value: "not_started", label: "Not started" },
+  { value: "in_progress", label: "In progress" },
+  { value: "completed", label: "Completed" },
+];
 
 export function TaskDetailPanel({ task, onClose }: { task: Task | null; onClose: () => void }) {
   const [subtasks, setSubtasks] = useState<TaskSubtask[]>([]);
@@ -128,6 +135,25 @@ export function TaskDetailPanel({ task, onClose }: { task: Task | null; onClose:
           value={task.due_at ? task.due_at.slice(0, 10) : null}
           onChange={(date) => startTransition(() => updateTask(task.id, { due_at: date }))}
         />
+
+        <div>
+          <label className="text-label text-graphite mb-1.5 block">Status</label>
+          <div className="flex gap-1.5">
+            {STATUSES.map((s) => (
+              <button
+                key={s.value}
+                onClick={() => startTransition(() => moveTaskBoardStatus(task.id, s.value))}
+                className={`px-3 py-1.5 rounded-md text-small border transition-fast ${
+                  taskBoardStatus(task) === s.value
+                    ? "bg-carbon text-white border-carbon dark:bg-tuscan dark:text-carbon dark:border-tuscan"
+                    : "border-alabaster hover:bg-bg"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div>
           <label className="text-label text-graphite mb-1.5 block">Priority</label>
