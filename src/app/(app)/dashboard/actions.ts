@@ -1,17 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { toISODate } from "@/lib/scores";
-
-async function requireUserId() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-  return { supabase, userId: user.id };
-}
+import { requireUserId } from "@/lib/supabase/require-user";
 
 export async function addTask(title: string) {
   const { supabase, userId } = await requireUserId();
