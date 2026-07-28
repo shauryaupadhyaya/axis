@@ -1,6 +1,10 @@
-import { BookOpen } from "lucide-react";
-import { ComingSoon } from "@/components/ui/ComingSoon";
+import { createClient } from "@/lib/supabase/server";
+import { SubjectsList } from "@/components/study/SubjectsList";
+import type { Exam } from "@/lib/types";
 
-export default function StudyPage() {
-  return <ComingSoon icon={BookOpen} title="Study" />;
+export default async function StudyPage() {
+  const supabase = await createClient();
+  const { data } = await supabase.from("exams").select("*").order("exam_date", { ascending: true });
+
+  return <SubjectsList exams={(data as Exam[]) ?? []} />;
 }
