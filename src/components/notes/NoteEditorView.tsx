@@ -25,7 +25,10 @@ export function NoteEditorView({
   const [tagInput, setTagInput] = useState("");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestRef = useRef({ title: note.title, content: note.content, folderId: note.folder_id });
-  latestRef.current = { title, content, folderId };
+
+  useEffect(() => {
+    latestRef.current = { title, content, folderId };
+  }, [title, content, folderId]);
 
   const save = useRef(() => {
     const { title, content, folderId } = latestRef.current;
