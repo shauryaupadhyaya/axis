@@ -4,9 +4,39 @@ export interface Task {
   id: string;
   user_id: string;
   title: string;
+  description: string | null;
   done: boolean;
+  in_progress: boolean;
   due_at: string | null;
   priority: Priority;
+  tags: string[];
+  created_at: string;
+}
+
+export type TaskBoardStatus = "not_started" | "in_progress" | "completed";
+
+export function taskBoardStatus(task: Pick<Task, "done" | "in_progress">): TaskBoardStatus {
+  if (task.done) return "completed";
+  if (task.in_progress) return "in_progress";
+  return "not_started";
+}
+
+export interface TaskSubtask {
+  id: string;
+  task_id: string;
+  user_id: string;
+  title: string;
+  done: boolean;
+  position: number;
+}
+
+export interface TaskAttachment {
+  id: string;
+  task_id: string;
+  user_id: string;
+  file_name: string;
+  storage_path: string;
+  size_bytes: number;
   created_at: string;
 }
 
@@ -39,10 +69,24 @@ export interface Exam {
   chapters_mastered: number;
 }
 
+export type ChapterStatus = "not_started" | "learning" | "revised" | "mastered";
+
+export interface Chapter {
+  id: string;
+  subject_id: string;
+  user_id: string;
+  name: string;
+  status: ChapterStatus;
+  position: number;
+  last_revised_at: string | null;
+  revision_frequency_days: number;
+}
+
 export interface StudySession {
   id: string;
   user_id: string;
   subject_id: string | null;
+  chapter_id: string | null;
   minutes: number;
   logged_at: string;
 }
@@ -54,6 +98,11 @@ export interface WaterLog {
   logged_at: string;
 }
 
+export interface UserSettings {
+  user_id: string;
+  water_goal_ml: number;
+}
+
 export type WorkoutStatus = "scheduled" | "completed" | "skipped";
 
 export interface Workout {
@@ -62,4 +111,41 @@ export interface Workout {
   name: string;
   scheduled_date: string;
   status: WorkoutStatus;
+}
+
+export interface WorkoutExercise {
+  id: string;
+  workout_id: string;
+  user_id: string;
+  name: string;
+  muscle_group: string;
+  position: number;
+}
+
+export interface WorkoutSet {
+  id: string;
+  workout_exercise_id: string;
+  user_id: string;
+  set_number: number;
+  weight: number;
+  reps: number;
+  completed: boolean;
+  logged_at: string | null;
+}
+
+export type SkincarePeriod = "am" | "pm";
+
+export interface SkincareStep {
+  id: string;
+  user_id: string;
+  period: SkincarePeriod;
+  name: string;
+  position: number;
+}
+
+export interface SkincareCompletion {
+  id: string;
+  step_id: string;
+  user_id: string;
+  completed_at: string;
 }

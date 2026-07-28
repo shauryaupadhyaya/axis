@@ -85,16 +85,16 @@ begin
   foreach t in array array['tasks', 'habits', 'habit_completions', 'exams', 'study_sessions', 'water_logs', 'workouts']
   loop
     execute format(
-      'create policy "%1$s_owner_select" on public.%1$s for select using ((select auth.uid()) = user_id)', t
+      'create policy "%1$s_owner_select" on public.%1$s for select to authenticated using ((select auth.uid()) = user_id)', t
     );
     execute format(
-      'create policy "%1$s_owner_insert" on public.%1$s for insert with check ((select auth.uid()) = user_id)', t
+      'create policy "%1$s_owner_insert" on public.%1$s for insert to authenticated with check ((select auth.uid()) = user_id)', t
     );
     execute format(
-      'create policy "%1$s_owner_update" on public.%1$s for update using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id)', t
+      'create policy "%1$s_owner_update" on public.%1$s for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id)', t
     );
     execute format(
-      'create policy "%1$s_owner_delete" on public.%1$s for delete using ((select auth.uid()) = user_id)', t
+      'create policy "%1$s_owner_delete" on public.%1$s for delete to authenticated using ((select auth.uid()) = user_id)', t
     );
   end loop;
 end $$;
