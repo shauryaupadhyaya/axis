@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { addDays, startOfDay } from "date-fns";
-import { Plus, List as ListIcon, Columns3, CalendarDays, ChevronDown } from "lucide-react";
+import { addDays, addMonths, format, startOfDay } from "date-fns";
+import { Plus, List as ListIcon, Columns3, CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Toast } from "@/components/ui/Toast";
 import { TaskListLayout } from "./TaskListLayout";
@@ -36,6 +36,8 @@ export function TasksView({ tasks }: { tasks: Task[] }) {
   const [addOpen, setAddOpen] = useState(false);
   const [addDefaultDate, setAddDefaultDate] = useState<string | null>(null);
   const [toast, setToast] = useState<{ taskId: string; undo: CompletionResult; message: string } | null>(null);
+  const [boardStart, setBoardStart] = useState(() => new Date());
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [, startTransition] = useTransition();
 
   const selectedTask = tasks.find((t) => t.id === selectedId) ?? null;
@@ -68,7 +70,20 @@ export function TasksView({ tasks }: { tasks: Task[] }) {
 
   const sorted = useMemo(() => sortTasks(filtered, sortMode), [filtered, sortMode]);
 
-  const boardDays = useMemo(() => Array.from({ length: 14 }, (_, i) => addDays(new Date(), i)), []);
+  const boardDays = useMemo(() => Array.from({ length: 14 }, (_, i) => addDays(boardStart, i)), [boardStart]);
+
+  function shiftBoard(delta: number) {
+    setBoardStart((d) => addDays(d, delta * 14));
+  }
+
+  function shiftCalendarMonth(delta: number) {
+    setCalendarMonth((m) => addMonths(m, delta));
+  }
+
+  function resetToToday() {
+    setBoardStart(new Date());
+    setCalendarMonth(new Date());
+  }
 
   function openCreate(defaultDate?: string | null) {
     setAddDefaultDate(defaultDate ?? null);
@@ -152,6 +167,31 @@ export function TasksView({ tasks }: { tasks: Task[] }) {
                   <Icon size={15} />
                 </button>
               ))}
+            </div>
+          )}
+
+          {scope === "upcoming" && (layout === "board" || layout === "calendar") && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => (layout === "board" ? shiftBoard(-1) : shiftCalendarMonth(-1))}
+                aria-label="Previous"
+                className="p-1.5 rounded-md border border-alabaster hover:bg-bg transition-fast"
+              >
+                <ChevronLeft size={15} />
+              </button>
+              <button
+                onClick={resetToToday}
+                className="px-2.5 py-1.5 rounded-md border border-alabaster text-small hover:bg-bg transition-fast min-w-[92px] text-center"
+              >
+                {layout === "calendar" ? format(calendarMonth, "MMMM yyyy") : "Today"}
+              </button>
+              <button
+                onClick={() => (layout === "board" ? shiftBoard(1) : shiftCalendarMonth(1))}
+                aria-label="Next"
+                className="p-1.5 rounded-md border border-alabaster hover:bg-bg transition-fast"
+              >
+                <ChevronRight size={15} />
+              </button>
             </div>
           )}
 
@@ -243,7 +283,7 @@ export function TasksView({ tasks }: { tasks: Task[] }) {
         <TaskBoardLayout tasks={sorted} days={boardDays} onTaskClick={setSelectedId} onAddTask={openCreate} onReschedule={handleReschedule} />
       )}
       {scope === "upcoming" && layout === "calendar" && (
-        <TaskCalendarLayout tasks={sorted} month={new Date()} onTaskClick={setSelectedId} onReschedule={handleReschedule} />
+        <TaskCalendarLayout tasks={sorted} month={calendarMonth} onTaskClick={setSelectedId} onReschedule={handleReschedule} />
       )}
 
       <TaskCreateModal open={addOpen} onClose={() => setAddOpen(false)} defaultDueDate={addDefaultDate} />
