@@ -4,14 +4,6 @@ import { revalidatePath } from "next/cache";
 import { toISODate } from "@/lib/scores";
 import { requireUserId } from "@/lib/supabase/require-user";
 
-export async function addTask(title: string) {
-  const { supabase, userId } = await requireUserId();
-  const trimmed = title.trim();
-  if (!trimmed) return;
-  await supabase.from("tasks").insert({ user_id: userId, title: trimmed });
-  revalidatePath("/dashboard");
-}
-
 export async function toggleTask(taskId: string, done: boolean) {
   const { supabase, userId } = await requireUserId();
   await supabase.from("tasks").update({ done }).eq("id", taskId).eq("user_id", userId);
