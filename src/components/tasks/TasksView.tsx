@@ -11,7 +11,7 @@ import { TaskCalendarLayout } from "./TaskCalendarLayout";
 import { TaskCreateModal } from "./TaskCreateModal";
 import { TaskDetailPanel } from "./TaskDetailPanel";
 import { sortTasks, SORT_MODES, type SortMode } from "@/lib/tasks/sort";
-import { PRIORITY_LABEL, type Priority, type Task } from "@/lib/types";
+import { PRIORITY_BADGE_CLASS, PRIORITY_LABEL, type Priority, type Task } from "@/lib/types";
 import { completeTask, uncompleteTask, updateTask } from "@/app/(app)/tasks/actions";
 import type { CompletionResult } from "@/lib/tasks/service";
 
@@ -225,9 +225,7 @@ export function TasksView({ tasks }: { tasks: Task[] }) {
                       key={p}
                       onClick={() => togglePriority(p)}
                       className={`px-2 py-1 rounded-md text-caption border transition-fast ${
-                        priorityFilter.has(p)
-                          ? "bg-carbon text-white border-carbon dark:bg-tuscan dark:text-carbon dark:border-tuscan"
-                          : "border-alabaster hover:bg-bg"
+                        priorityFilter.has(p) ? PRIORITY_BADGE_CLASS[p] : "border-alabaster hover:bg-bg"
                       }`}
                     >
                       {PRIORITY_LABEL[p]}

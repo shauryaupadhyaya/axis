@@ -17,7 +17,7 @@ import { eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, isToday,
 import { Repeat } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { formatRecurrence } from "@/lib/tasks/recurrence";
-import type { Task } from "@/lib/types";
+import { PRIORITY_BORDER_CLASS, type Task } from "@/lib/types";
 
 interface TaskCalendarLayoutProps {
   tasks: Task[];
@@ -40,7 +40,8 @@ function DraggableTaskChip({ task, onClick }: { task: Task; onClick: () => void 
       onClick={onClick}
       style={{ transform: CSS.Translate.toString(transform) }}
       className={cn(
-        "flex items-center gap-1 w-full text-[10px] truncate border-l-2 border-l-alabaster pl-1 leading-tight text-left cursor-grab active:cursor-grabbing",
+        "flex items-center gap-1 w-full text-[10px] truncate border-l-2 pl-1 leading-tight text-left cursor-grab active:cursor-grabbing",
+        PRIORITY_BORDER_CLASS[task.priority],
         isDragging && "opacity-40"
       )}
     >

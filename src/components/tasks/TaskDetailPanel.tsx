@@ -19,7 +19,7 @@ import {
   uploadTaskAttachment,
 } from "@/lib/attachments";
 import type { Priority, Task, TaskAttachment, TaskComment } from "@/lib/types";
-import { PRIORITY_LABEL } from "@/lib/types";
+import { PRIORITY_BADGE_CLASS, PRIORITY_LABEL } from "@/lib/types";
 import {
   addComment,
   addSubtask,
@@ -294,9 +294,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task | null; onClose:
                 key={p}
                 onClick={() => startTransition(() => updateTask(task.id, { priority: p }))}
                 className={`px-3 py-1.5 rounded-md text-small border transition-fast ${
-                  task.priority === p
-                    ? "bg-carbon text-white border-carbon dark:bg-tuscan dark:text-carbon dark:border-tuscan"
-                    : "border-alabaster hover:bg-bg"
+                  task.priority === p ? PRIORITY_BADGE_CLASS[p] : "border-alabaster hover:bg-bg"
                 }`}
               >
                 {PRIORITY_LABEL[p]}

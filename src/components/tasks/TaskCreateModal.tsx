@@ -13,7 +13,7 @@ import { VoiceInputButton } from "./VoiceInputButton";
 import { parseTaskText } from "@/lib/tasks/nlp";
 import { formatRecurrence } from "@/lib/tasks/recurrence";
 import { uploadTaskAttachment } from "@/lib/attachments";
-import { PRIORITY_LABEL, type Priority, type RecurrenceRule } from "@/lib/types";
+import { PRIORITY_BADGE_CLASS, PRIORITY_LABEL, type Priority, type RecurrenceRule } from "@/lib/types";
 import { createTask } from "@/app/(app)/tasks/actions";
 
 interface TaskCreateModalProps {
@@ -291,9 +291,7 @@ export function TaskCreateModal({ open, onClose, defaultDueDate }: TaskCreateMod
                   setPriorityTouched(true);
                 }}
                 className={`px-3 py-1.5 rounded-md text-small border transition-fast ${
-                  priority === p
-                    ? "bg-carbon text-white border-carbon dark:bg-tuscan dark:text-carbon dark:border-tuscan"
-                    : "border-alabaster hover:bg-bg"
+                  priority === p ? PRIORITY_BADGE_CLASS[p] : "border-alabaster hover:bg-bg"
                 }`}
               >
                 {PRIORITY_LABEL[p]}

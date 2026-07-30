@@ -8,6 +8,30 @@ export const PRIORITY_LABEL: Record<Priority, "P1" | "P2" | "P3" | "P4"> = {
   low: "P4",
 };
 
+/** Small solid-color dot/indicator class per priority. */
+export const PRIORITY_DOT_CLASS: Record<Priority, string> = {
+  urgent: "bg-danger",
+  high: "bg-warning",
+  medium: "bg-info",
+  low: "bg-alabaster",
+};
+
+/** Left-border accent class per priority, for cards/chips. */
+export const PRIORITY_BORDER_CLASS: Record<Priority, string> = {
+  urgent: "border-l-danger",
+  high: "border-l-warning",
+  medium: "border-l-info",
+  low: "border-l-alabaster",
+};
+
+/** Selected/active chip background class per priority (unselected chips stay neutral). */
+export const PRIORITY_BADGE_CLASS: Record<Priority, string> = {
+  urgent: "bg-danger text-white border-danger",
+  high: "bg-warning text-white border-warning",
+  medium: "bg-info text-white border-info",
+  low: "bg-carbon text-white border-carbon dark:bg-tuscan dark:text-carbon dark:border-tuscan",
+};
+
 export type RecurrenceFreq = "daily" | "weekly" | "monthly" | "yearly" | "weekdays";
 
 export interface RecurrenceRule {

@@ -6,7 +6,7 @@ import { Plus, Repeat } from "lucide-react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { cn } from "@/lib/cn";
 import { formatRecurrence } from "@/lib/tasks/recurrence";
-import type { Task } from "@/lib/types";
+import { PRIORITY_DOT_CLASS, type Task } from "@/lib/types";
 
 interface TaskListLayoutProps {
   tasks: Task[];
@@ -75,6 +75,10 @@ function ListRow({
       />
       <button onClick={() => onTaskClick(task.id)} className="flex-1 min-w-0 text-left flex flex-col gap-0.5">
         <div className="flex items-center gap-1.5">
+          <span
+            title={`Priority ${task.priority}`}
+            className={cn("w-1.5 h-1.5 rounded-full shrink-0", PRIORITY_DOT_CLASS[task.priority])}
+          />
           <span className={cn("text-body truncate", task.done && "opacity-50 line-through")}>{task.title}</span>
           {task.recurrence && (
             <span title={formatRecurrence(task.recurrence)} className="shrink-0">

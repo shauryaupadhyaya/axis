@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { cn } from "@/lib/cn";
 import { formatRecurrence } from "@/lib/tasks/recurrence";
-import type { Task } from "@/lib/types";
+import { PRIORITY_BORDER_CLASS, type Task } from "@/lib/types";
 
 interface TaskBoardLayoutProps {
   tasks: Task[];
@@ -53,7 +53,11 @@ function columnTitle(day: Date): string {
 function BoardTaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
   const preview = stripDescription(task.description);
   return (
-    <Card variant="lightweight" onClick={onClick} className="cursor-pointer bg-linen dark:bg-bg-secondary">
+    <Card
+      variant="lightweight"
+      onClick={onClick}
+      className={cn("cursor-pointer bg-linen dark:bg-bg-secondary border-l-4", PRIORITY_BORDER_CLASS[task.priority])}
+    >
       <div className="flex items-start gap-2">
         <Checkbox
           checked={task.done}
