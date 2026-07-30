@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -14,14 +15,22 @@ function formatDue(due: string | null) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function stripDescription(description: string | null): string {
+  if (!description) return "";
+  const plain = description.replace(/<[^>]+>/g, "").trim();
+  return plain.length > 100 ? `${plain.slice(0, 100)}…` : plain;
+}
+
 export function TasksWidget({ tasks }: { tasks: Task[] }) {
   const [addOpen, setAddOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const visible = tasks
-    .filter((t) => !t.done && t.due_at)
-    .sort((a, b) => new Date(a.due_at!).getTime() - new Date(b.due_at!).getTime())
-    .slice(0, 3);
+  const nextTask =
+    tasks
+      .filter((t) => !t.done && t.due_at)
+      .sort((a, b) => new Date(a.due_at!).getTime() - new Date(b.due_at!).getTime())[0] ?? null;
+
+  const preview = stripDescription(nextTask?.description ?? null);
 
   return (
     <Card>
@@ -36,31 +45,34 @@ export function TasksWidget({ tasks }: { tasks: Task[] }) {
         </button>
       </div>
 
-      {visible.length === 0 ? (
+      {!nextTask ? (
         <p className="text-small text-graphite py-4 text-center">Clear. Add one?</p>
       ) : (
-        <ul>
-          {visible.map((task) => (
-            <li
-              key={task.id}
-              className="flex items-center gap-3 py-2.5 border-b border-alabaster last:border-b-0"
-            >
-              <Checkbox
-                checked={task.done}
-                disabled={pending}
-                onChange={(e) => startTransition(() => toggleTask(task.id, e.target.checked))}
-              />
-              <span
-                title={`Priority ${task.priority}`}
-                className={`w-1.5 h-1.5 rounded-full shrink-0 ${PRIORITY_DOT_CLASS[task.priority]}`}
-              />
-              <span className="flex-1 text-body">{task.title}</span>
-              {task.due_at && (
-                <span className="text-mono text-graphite">{formatDue(task.due_at)}</span>
+        <Link href="/tasks" className="flex items-start gap-3 py-1 -mx-1 px-1 rounded-lg hover:bg-bg transition-fast">
+          <Checkbox
+            checked={nextTask.done}
+            disabled={pending}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              e.stopPropagation();
+              startTransition(() => toggleTask(nextTask.id, e.target.checked));
+            }}
+            className="mt-1 shrink-0"
+          />
+          <span
+            title={`Priority ${nextTask.priority}`}
+            className={`w-1.5 h-1.5 rounded-full shrink-0 mt-2 ${PRIORITY_DOT_CLASS[nextTask.priority]}`}
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-body truncate">{nextTask.title}</span>
+              {nextTask.due_at && (
+                <span className="text-mono text-graphite shrink-0">{formatDue(nextTask.due_at)}</span>
               )}
-            </li>
-          ))}
-        </ul>
+            </div>
+            {preview && <p className="text-small text-graphite mt-0.5 truncate">{preview}</p>}
+          </div>
+        </Link>
       )}
 
       <TaskCreateModal open={addOpen} onClose={() => setAddOpen(false)} />
