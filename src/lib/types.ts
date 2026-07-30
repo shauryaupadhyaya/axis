@@ -1,5 +1,24 @@
 export type Priority = "low" | "medium" | "high" | "urgent";
 
+/** UI-facing Todoist-style label for a Priority value; urgent=P1 ... low=P4. */
+export const PRIORITY_LABEL: Record<Priority, "P1" | "P2" | "P3" | "P4"> = {
+  urgent: "P1",
+  high: "P2",
+  medium: "P3",
+  low: "P4",
+};
+
+export type RecurrenceFreq = "daily" | "weekly" | "monthly" | "yearly" | "weekdays";
+
+export interface RecurrenceRule {
+  freq: RecurrenceFreq;
+  interval: number;
+  /** For weekly: day-of-week codes, e.g. ["MO", "WE"]. */
+  byDay?: string[];
+  /** For monthly: day of month, e.g. 1. */
+  byMonthDay?: number;
+}
+
 export interface Task {
   id: string;
   user_id: string;
@@ -11,23 +30,18 @@ export interface Task {
   priority: Priority;
   tags: string[];
   created_at: string;
+  parent_task_id: string | null;
+  recurrence: RecurrenceRule | null;
+  reminder_at: string | null;
+  completed_at: string | null;
 }
 
-export type TaskBoardStatus = "not_started" | "in_progress" | "completed";
-
-export function taskBoardStatus(task: Pick<Task, "done" | "in_progress">): TaskBoardStatus {
-  if (task.done) return "completed";
-  if (task.in_progress) return "in_progress";
-  return "not_started";
-}
-
-export interface TaskSubtask {
+export interface TaskComment {
   id: string;
   task_id: string;
   user_id: string;
-  title: string;
-  done: boolean;
-  position: number;
+  body: string;
+  created_at: string;
 }
 
 export interface TaskAttachment {

@@ -30,7 +30,7 @@ export function Fab() {
     const date = dueDate;
     startTransition(async () => {
       if (type === "task") {
-        const id = await createTask(text);
+        const id = await createTask({ title: text });
         if (id && date) {
           await updateTask(id, { due_at: date });
         }

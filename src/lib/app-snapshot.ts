@@ -19,7 +19,7 @@ export async function getAppSnapshot(): Promise<AppSnapshot> {
   const todayIso = today.toISOString().slice(0, 10);
 
   const [tasksRes, homeworkRes, examsRes, eventsRes, habitsRes, completionsRes] = await Promise.all([
-    supabase.from("tasks").select("*").eq("done", false),
+    supabase.from("tasks").select("*").eq("done", false).is("parent_task_id", null),
     supabase.from("homework").select("*").eq("done", false),
     supabase.from("exams").select("*"),
     supabase.from("calendar_events").select("*"),

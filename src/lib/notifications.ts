@@ -29,6 +29,20 @@ export function buildNotifications(snapshot: AppSnapshot, now = new Date()): App
     }
   }
 
+  for (const task of snapshot.tasks) {
+    if (!task.reminder_at) continue;
+    const diff = new Date(task.reminder_at).getTime() - now.getTime();
+    if (diff <= 0 && diff > -DAY_MS) {
+      notifications.push({
+        id: `task-reminder-${task.id}`,
+        title: "Task reminder",
+        body: task.title,
+        severity: "info",
+        href: "/tasks",
+      });
+    }
+  }
+
   for (const hw of snapshot.homework) {
     if (!hw.due_at) continue;
     const due = new Date(hw.due_at);

@@ -7,6 +7,7 @@ export default async function TasksPage() {
   const { data } = await supabase
     .from("tasks")
     .select("*")
+    .is("parent_task_id", null)
     .order("due_at", { ascending: true, nullsFirst: false });
 
   return <TasksView tasks={(data as Task[]) ?? []} />;

@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     if (lastNotified && now.getTime() - lastNotified.getTime() < RESEND_INTERVAL_MS) continue;
 
     const [tasksRes, homeworkRes, examsRes, eventsRes, habitsRes, completionsRes] = await Promise.all([
-      supabase.from("tasks").select("*").eq("user_id", userId).eq("done", false),
+      supabase.from("tasks").select("*").eq("user_id", userId).eq("done", false).is("parent_task_id", null),
       supabase.from("homework").select("*").eq("user_id", userId).eq("done", false),
       supabase.from("exams").select("*").eq("user_id", userId),
       supabase.from("calendar_events").select("*").eq("user_id", userId),

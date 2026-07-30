@@ -5,6 +5,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Send } from "lucide-react";
 import { SidePanel } from "@/components/ui/SidePanel";
+import { VoiceInputButton } from "@/components/tasks/VoiceInputButton";
 import type { AssistantUIMessage } from "@/lib/ai/agent";
 
 export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -17,6 +18,12 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
     e.preventDefault();
     if (!input.trim() || status !== "ready") return;
     sendMessage({ text: input });
+    setInput("");
+  }
+
+  function handleVoiceTranscript(transcript: string) {
+    if (!transcript.trim() || status !== "ready") return;
+    sendMessage({ text: transcript });
     setInput("");
   }
 
@@ -54,6 +61,76 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
                     </span>
                   );
                 }
+                if (part.type === "tool-listTasks" && part.state === "output-available") {
+                  return (
+                    <span key={i} className="block italic opacity-80">
+                      Looked up tasks
+                    </span>
+                  );
+                }
+                if (part.type === "tool-listTasks") {
+                  return (
+                    <span key={i} className="block italic opacity-60">
+                      Looking up tasks…
+                    </span>
+                  );
+                }
+                if (part.type === "tool-updateTask" && part.state === "output-available") {
+                  return (
+                    <span key={i} className="block italic opacity-80">
+                      Updated task: {part.input.title ?? part.input.taskId}
+                    </span>
+                  );
+                }
+                if (part.type === "tool-updateTask") {
+                  return (
+                    <span key={i} className="block italic opacity-60">
+                      Updating task…
+                    </span>
+                  );
+                }
+                if (part.type === "tool-completeTask" && part.state === "output-available") {
+                  return (
+                    <span key={i} className="block italic opacity-80">
+                      Completed task
+                    </span>
+                  );
+                }
+                if (part.type === "tool-completeTask") {
+                  return (
+                    <span key={i} className="block italic opacity-60">
+                      Completing task…
+                    </span>
+                  );
+                }
+                if (part.type === "tool-deleteTask" && part.state === "output-available") {
+                  return (
+                    <span key={i} className="block italic opacity-80">
+                      Deleted task
+                    </span>
+                  );
+                }
+                if (part.type === "tool-deleteTask") {
+                  return (
+                    <span key={i} className="block italic opacity-60">
+                      Deleting task…
+                    </span>
+                  );
+                }
+                if (part.type === "tool-addSubtask" && part.state === "output-available") {
+                  return (
+                    <span key={i} className="block italic opacity-80">
+                      Added subtask: {part.input.title}
+                    </span>
+                  );
+                }
+                if (part.type === "tool-addSubtask") {
+                  return (
+                    <span key={i} className="block italic opacity-60">
+                      Adding subtask…
+                    </span>
+                  );
+                }
                 return null;
               })}
             </div>
@@ -68,6 +145,7 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
             placeholder="Ask the assistant…"
             className="flex-1 px-3 py-2 rounded-lg border border-alabaster bg-transparent text-small focus:outline-none focus:ring-1 focus:ring-tuscan"
           />
+          <VoiceInputButton onTranscript={handleVoiceTranscript} className="border border-alabaster" />
           <button
             type="submit"
             disabled={status !== "ready" || !input.trim()}

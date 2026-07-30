@@ -32,7 +32,7 @@ export default async function ProfilePage() {
 
   const [tasksRes, habitsRes, completionsRes, studyRes, waterRes, workoutRes] =
     await Promise.all([
-      supabase.from("tasks").select("*"),
+      supabase.from("tasks").select("*").is("parent_task_id", null),
       supabase.from("habits").select("*"),
       supabase
         .from("habit_completions")

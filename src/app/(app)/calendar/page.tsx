@@ -16,7 +16,7 @@ export default async function CalendarPage() {
 
   const [tasksRes, workoutsRes, examsRes, studyRes, habitsRes, completionsRes, homeworkRes, eventsRes] =
     await Promise.all([
-      supabase.from("tasks").select("*"),
+      supabase.from("tasks").select("*").is("parent_task_id", null),
       supabase.from("workouts").select("*"),
       supabase.from("exams").select("*"),
       supabase.from("study_sessions").select("*"),

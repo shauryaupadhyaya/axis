@@ -1,140 +1,256 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Plus } from "lucide-react";
-import { Input } from "@/components/ui/Input";
+import { addDays, startOfDay } from "date-fns";
+import { Plus, List as ListIcon, Columns3, CalendarDays, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
-import { DatePicker } from "@/components/ui/DatePicker";
-import { DndBoard, type DndColumn } from "@/components/dnd/DndBoard";
-import { MonthGrid, type MonthGridEvent } from "@/components/calendar/MonthGrid";
-import { TaskRow } from "./TaskRow";
-import { TaskCard } from "./TaskCard";
+import { Toast } from "@/components/ui/Toast";
+import { TaskListLayout } from "./TaskListLayout";
+import { TaskBoardLayout } from "./TaskBoardLayout";
+import { TaskCalendarLayout } from "./TaskCalendarLayout";
+import { TaskCreateModal } from "./TaskCreateModal";
 import { TaskDetailPanel } from "./TaskDetailPanel";
-import type { Task, TaskBoardStatus } from "@/lib/types";
-import { taskBoardStatus } from "@/lib/types";
-import { createTask, moveTaskBoardStatus, updateTask } from "@/app/(app)/tasks/actions";
+import { sortTasks, SORT_MODES, type SortMode } from "@/lib/tasks/sort";
+import { PRIORITY_LABEL, type Priority, type Task } from "@/lib/types";
+import { completeTask, uncompleteTask, updateTask } from "@/app/(app)/tasks/actions";
+import type { CompletionResult } from "@/lib/tasks/service";
 
-type View = "list" | "board" | "timeline";
+type Scope = "inbox" | "today" | "upcoming";
+type Layout = "list" | "board" | "calendar";
 
-const PRIORITY_BORDER: Record<Task["priority"], string> = {
-  low: "border-l-alabaster",
-  medium: "border-l-info",
-  high: "border-l-warning",
-  urgent: "border-l-danger",
-};
+const PRIORITIES: Priority[] = ["urgent", "high", "medium", "low"];
+const LAYOUTS: { value: Layout; icon: typeof ListIcon }[] = [
+  { value: "list", icon: ListIcon },
+  { value: "board", icon: Columns3 },
+  { value: "calendar", icon: CalendarDays },
+];
 
 export function TasksView({ tasks }: { tasks: Task[] }) {
-  const [view, setView] = useState<View>("list");
+  const [scope, setScope] = useState<Scope>("inbox");
+  const [layout, setLayout] = useState<Layout>("list");
+  const [sortMode, setSortMode] = useState<SortMode>("smart");
+  const [priorityFilter, setPriorityFilter] = useState<Set<Priority>>(new Set());
+  const [labelFilter, setLabelFilter] = useState<Set<string>>(new Set());
+  const [filterOpen, setFilterOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newDueDate, setNewDueDate] = useState<string | null>(null);
+  const [addDefaultDate, setAddDefaultDate] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ taskId: string; undo: CompletionResult; message: string } | null>(null);
   const [, startTransition] = useTransition();
 
   const selectedTask = tasks.find((t) => t.id === selectedId) ?? null;
 
-  const columns: DndColumn<Task>[] = useMemo(() => {
-    const byStatus = (status: TaskBoardStatus) => tasks.filter((t) => taskBoardStatus(t) === status);
-    return [
-      { id: "not_started", title: "Not started", items: byStatus("not_started") },
-      { id: "in_progress", title: "In progress", items: byStatus("in_progress") },
-      { id: "completed", title: "Completed", items: byStatus("completed") },
-    ];
+  const allLabels = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of tasks) for (const tag of t.tags) set.add(tag);
+    return Array.from(set).sort();
   }, [tasks]);
 
-  const timelineEvents: MonthGridEvent[] = tasks
-    .filter((t) => t.due_at)
-    .map((t) => ({
-      id: t.id,
-      date: new Date(t.due_at!),
-      title: t.title,
-      colorClass: PRIORITY_BORDER[t.priority],
-      onClick: () => setSelectedId(t.id),
-    }));
+  const scoped = useMemo(() => {
+    const startToday = startOfDay(new Date());
+    const active = tasks.filter((t) => !t.done);
+    if (scope === "today") {
+      return active.filter((t) => t.due_at && new Date(t.due_at) < addDays(startToday, 1));
+    }
+    if (scope === "upcoming") {
+      return active.filter((t) => t.due_at && new Date(t.due_at) >= startToday);
+    }
+    return active;
+  }, [tasks, scope]);
 
-  function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newTitle.trim()) return;
-    const title = newTitle;
-    const dueDate = newDueDate;
-    startTransition(async () => {
-      const id = await createTask(title);
-      if (id && dueDate) await updateTask(id, { due_at: dueDate });
+  const filtered = useMemo(() => {
+    return scoped.filter((t) => {
+      if (priorityFilter.size > 0 && !priorityFilter.has(t.priority)) return false;
+      if (labelFilter.size > 0 && !t.tags.some((tag) => labelFilter.has(tag))) return false;
+      return true;
     });
-    setNewTitle("");
-    setNewDueDate(null);
-    setAddOpen(false);
+  }, [scoped, priorityFilter, labelFilter]);
+
+  const sorted = useMemo(() => sortTasks(filtered, sortMode), [filtered, sortMode]);
+
+  const boardDays = useMemo(() => Array.from({ length: 14 }, (_, i) => addDays(new Date(), i)), []);
+
+  function openCreate(defaultDate?: string | null) {
+    setAddDefaultDate(defaultDate ?? null);
+    setAddOpen(true);
+  }
+
+  function handleToggleComplete(taskId: string) {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    if (task.done) {
+      startTransition(() => updateTask(taskId, { done: false }));
+      return;
+    }
+    startTransition(async () => {
+      const result = await completeTask(taskId);
+      setToast({
+        taskId,
+        undo: result,
+        message: result.recurred ? "Task completed — will repeat" : "Task completed",
+      });
+    });
+  }
+
+  function handleUndo() {
+    if (!toast) return;
+    startTransition(() => uncompleteTask(toast.taskId, toast.undo));
+    setToast(null);
+  }
+
+  function handleReschedule(taskId: string, isoDate: string) {
+    startTransition(() => updateTask(taskId, { due_at: isoDate }));
+  }
+
+  function togglePriority(p: Priority) {
+    setPriorityFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(p)) next.delete(p);
+      else next.add(p);
+      return next;
+    });
+  }
+
+  function toggleLabel(l: string) {
+    setLabelFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(l)) next.delete(l);
+      else next.add(l);
+      return next;
+    });
   }
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="flex gap-1 border border-alabaster rounded-lg p-1">
-          {(["list", "board", "timeline"] as View[]).map((v) => (
+          {(["inbox", "today", "upcoming"] as Scope[]).map((s) => (
             <button
-              key={v}
-              onClick={() => setView(v)}
+              key={s}
+              onClick={() => setScope(s)}
               className={`px-3 py-1.5 rounded-md text-small capitalize transition-fast ${
-                view === v ? "bg-carbon text-white dark:bg-tuscan dark:text-carbon" : "hover:bg-bg"
+                scope === s ? "bg-carbon text-white dark:bg-tuscan dark:text-carbon" : "hover:bg-bg"
               }`}
             >
-              {v}
+              {s}
             </button>
           ))}
         </div>
-        <Button onClick={() => setAddOpen(true)} className="flex items-center gap-1.5">
-          <Plus size={16} /> New task
-        </Button>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {scope === "upcoming" && (
+            <div className="flex gap-1 border border-alabaster rounded-lg p-1">
+              {LAYOUTS.map(({ value, icon: Icon }) => (
+                <button
+                  key={value}
+                  onClick={() => setLayout(value)}
+                  aria-label={value}
+                  className={`p-1.5 rounded-md transition-fast ${
+                    layout === value ? "bg-carbon text-white dark:bg-tuscan dark:text-carbon" : "hover:bg-bg"
+                  }`}
+                >
+                  <Icon size={15} />
+                </button>
+              ))}
+            </div>
+          )}
+
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as SortMode)}
+            className="text-small border border-alabaster rounded-lg px-2 py-1.5 bg-transparent"
+          >
+            {SORT_MODES.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+
+          <div className="relative">
+            <button
+              onClick={() => setFilterOpen((v) => !v)}
+              className="text-small border border-alabaster rounded-lg px-2.5 py-1.5 flex items-center gap-1 hover:bg-bg transition-fast"
+            >
+              Filter
+              {(priorityFilter.size > 0 || labelFilter.size > 0) && <span className="w-1.5 h-1.5 rounded-full bg-tuscan" />}
+              <ChevronDown size={13} />
+            </button>
+            {filterOpen && (
+              <div className="absolute right-0 top-full mt-1 z-20 w-56 rounded-xl border border-alabaster bg-bg-secondary p-3 shadow-lg">
+                <p className="text-label text-graphite mb-1.5">Priority</p>
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {PRIORITIES.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => togglePriority(p)}
+                      className={`px-2 py-1 rounded-md text-caption border transition-fast ${
+                        priorityFilter.has(p)
+                          ? "bg-carbon text-white border-carbon dark:bg-tuscan dark:text-carbon dark:border-tuscan"
+                          : "border-alabaster hover:bg-bg"
+                      }`}
+                    >
+                      {PRIORITY_LABEL[p]}
+                    </button>
+                  ))}
+                </div>
+                {allLabels.length > 0 && (
+                  <>
+                    <p className="text-label text-graphite mb-1.5">Label</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {allLabels.map((l) => (
+                        <button
+                          key={l}
+                          onClick={() => toggleLabel(l)}
+                          className={`px-2 py-1 rounded-md text-caption border transition-fast ${
+                            labelFilter.has(l)
+                              ? "bg-carbon text-white border-carbon dark:bg-tuscan dark:text-carbon dark:border-tuscan"
+                              : "border-alabaster hover:bg-bg"
+                          }`}
+                        >
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          <Button onClick={() => openCreate()} className="flex items-center gap-1.5">
+            <Plus size={16} /> Add Task
+          </Button>
+        </div>
       </div>
 
-      <Modal
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        title="New task"
-        footer={
-          <Button type="submit" form="new-task-form" className="w-full">
-            Create task
-          </Button>
-        }
-      >
-        <form id="new-task-form" onSubmit={handleAdd} className="flex flex-col gap-4">
-          <Input
-            autoFocus
-            label="Title"
-            placeholder="Task title…"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-          />
-          <DatePicker label="Due date (optional)" value={newDueDate} onChange={setNewDueDate} />
-        </form>
-      </Modal>
-
-      {view === "list" && (
-        <div className="border border-alabaster rounded-xl p-2">
-          {tasks.length === 0 ? (
-            <p className="text-small text-graphite py-8 text-center">Clear. Add one?</p>
-          ) : (
-            tasks.map((task) => (
-              <TaskRow key={task.id} task={task} onClick={() => setSelectedId(task.id)} />
-            ))
-          )}
-        </div>
+      {scope === "today" && (
+        <p className="text-h3 mb-4">
+          Today <span className="text-graphite font-normal">· {sorted.length} Tasks</span>
+        </p>
       )}
 
-      {view === "board" && (
-        <DndBoard
-          columns={columns}
-          renderCard={(task) => <TaskCard task={task} onClick={() => setSelectedId(task.id)} />}
-          onDrop={(taskId, status) => startTransition(() => moveTaskBoardStatus(taskId, status as TaskBoardStatus))}
+      {(scope !== "upcoming" || layout === "list") && (
+        <TaskListLayout
+          tasks={sorted}
+          scope={scope}
+          onTaskClick={setSelectedId}
+          onToggleComplete={handleToggleComplete}
+          onAddTask={openCreate}
         />
       )}
-
-      {view === "timeline" && (
-        <MonthGrid month={new Date()} events={timelineEvents} />
+      {scope === "upcoming" && layout === "board" && (
+        <TaskBoardLayout tasks={sorted} days={boardDays} onTaskClick={setSelectedId} onAddTask={openCreate} onReschedule={handleReschedule} />
+      )}
+      {scope === "upcoming" && layout === "calendar" && (
+        <TaskCalendarLayout tasks={sorted} month={new Date()} onTaskClick={setSelectedId} onReschedule={handleReschedule} />
       )}
 
+      <TaskCreateModal open={addOpen} onClose={() => setAddOpen(false)} defaultDueDate={addDefaultDate} />
       <TaskDetailPanel task={selectedTask} onClose={() => setSelectedId(null)} />
+      {toast && (
+        <Toast message={toast.message} action={{ label: "Undo", onClick: handleUndo }} onDismiss={() => setToast(null)} />
+      )}
     </div>
   );
 }

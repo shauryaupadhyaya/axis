@@ -40,7 +40,11 @@ export default async function DashboardPage() {
 
   const [tasksRes, habitsRes, completionsRes, examsRes, studyRes, waterRes, workoutRes] =
     await Promise.all([
-      supabase.from("tasks").select("*").order("due_at", { ascending: true, nullsFirst: false }),
+      supabase
+        .from("tasks")
+        .select("*")
+        .is("parent_task_id", null)
+        .order("due_at", { ascending: true, nullsFirst: false }),
       supabase.from("habits").select("*").order("created_at"),
       supabase
         .from("habit_completions")
