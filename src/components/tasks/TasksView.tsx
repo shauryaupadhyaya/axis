@@ -55,7 +55,7 @@ export function TasksView({ tasks }: { tasks: Task[] }) {
       return active.filter((t) => t.due_at && new Date(t.due_at) < addDays(startToday, 1));
     }
     if (scope === "upcoming") {
-      return active.filter((t) => t.due_at && new Date(t.due_at) >= startToday);
+      return active.filter((t) => t.due_at);
     }
     return active;
   }, [tasks, scope]);

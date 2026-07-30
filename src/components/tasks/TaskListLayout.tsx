@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef } from "react";
-import { addDays, format, isToday, isTomorrow, parse } from "date-fns";
-import { Plus, Repeat } from "lucide-react";
+import { useRef, useState } from "react";
+import { addDays, format, isToday, isTomorrow, startOfWeek } from "date-fns";
+import { ChevronLeft, ChevronRight, Plus, Repeat } from "lucide-react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { cn } from "@/lib/cn";
 import { formatRecurrence } from "@/lib/tasks/recurrence";
@@ -16,36 +16,10 @@ interface TaskListLayoutProps {
   onAddTask: (defaultDueDate?: string | null) => void;
 }
 
-interface TaskGroup {
-  key: string;
-  date: Date | null;
-  tasks: Task[];
-}
-
 function stripDescription(description: string | null): string {
   if (!description) return "";
   const plain = description.replace(/<[^>]+>/g, "").trim();
   return plain.length > 80 ? `${plain.slice(0, 80)}…` : plain;
-}
-
-function buildGroups(tasks: Task[]): TaskGroup[] {
-  const byDate = new Map<string, Task[]>();
-  const noDate: Task[] = [];
-  for (const task of tasks) {
-    if (!task.due_at) {
-      noDate.push(task);
-      continue;
-    }
-    const key = format(new Date(task.due_at), "yyyy-MM-dd");
-    const list = byDate.get(key) ?? [];
-    list.push(task);
-    byDate.set(key, list);
-  }
-  const groups: TaskGroup[] = Array.from(byDate.keys())
-    .sort()
-    .map((key) => ({ key, date: parse(key, "yyyy-MM-dd", new Date()), tasks: byDate.get(key)! }));
-  if (noDate.length > 0) groups.push({ key: "no-date", date: null, tasks: noDate });
-  return groups;
 }
 
 function formatGroupHeader(date: Date): string {
@@ -106,6 +80,7 @@ function AddTaskRow({ onClick }: { onClick: () => void }) {
 
 export function TaskListLayout({ tasks, scope, onTaskClick, onToggleComplete, onAddTask }: TaskListLayoutProps) {
   const groupRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
 
   if (scope !== "upcoming") {
     return (
@@ -122,33 +97,67 @@ export function TaskListLayout({ tasks, scope, onTaskClick, onToggleComplete, on
     );
   }
 
-  const groups = buildGroups(tasks);
-  const upcomingDays = Array.from({ length: 14 }, (_, i) => addDays(new Date(), i));
+  const weekDays = Array.from({ length: 6 }, (_, i) => addDays(weekStart, i));
+
+  const tasksByDay = new Map<string, Task[]>();
+  for (const task of tasks) {
+    if (!task.due_at) continue;
+    const key = format(new Date(task.due_at), "yyyy-MM-dd");
+    const list = tasksByDay.get(key) ?? [];
+    list.push(task);
+    tasksByDay.set(key, list);
+  }
 
   function scrollToGroup(key: string) {
     groupRefs.current.get(key)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function shiftWeek(delta: number) {
+    setWeekStart((d) => addDays(d, delta * 7));
+  }
+
+  function resetToThisWeek() {
+    setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  }
+
   return (
     <div className="flex flex-col">
       <div className="flex items-center justify-between mb-3 gap-3">
-        <span className="text-h3">{format(new Date(), "MMMM yyyy")}</span>
-        <button
-          onClick={() => scrollToGroup(format(new Date(), "yyyy-MM-dd"))}
-          className="text-small text-graphite hover:text-carbon dark:hover:text-white transition-fast shrink-0"
-        >
-          Today
-        </button>
+        <span className="text-h3">
+          {format(weekStart, "MMM d")} – {format(addDays(weekStart, 5), "MMM d")}
+        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={() => shiftWeek(-1)}
+            aria-label="Previous week"
+            className="p-1.5 rounded-md border border-alabaster hover:bg-bg transition-fast"
+          >
+            <ChevronLeft size={15} />
+          </button>
+          <button
+            onClick={resetToThisWeek}
+            className="px-2.5 py-1.5 rounded-md border border-alabaster text-small hover:bg-bg transition-fast"
+          >
+            This week
+          </button>
+          <button
+            onClick={() => shiftWeek(1)}
+            aria-label="Next week"
+            className="p-1.5 rounded-md border border-alabaster hover:bg-bg transition-fast"
+          >
+            <ChevronRight size={15} />
+          </button>
+        </div>
       </div>
 
-      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-3 -mx-1 px-1">
-        {upcomingDays.map((day) => {
+      <div className="flex gap-1.5 mb-3">
+        {weekDays.map((day) => {
           const key = format(day, "yyyy-MM-dd");
           return (
             <button
               key={key}
               onClick={() => scrollToGroup(key)}
-              className="shrink-0 flex flex-col items-center justify-center w-11 h-12 rounded-lg border border-alabaster text-caption hover:bg-bg transition-fast"
+              className="flex-1 flex flex-col items-center justify-center h-12 rounded-lg border border-alabaster text-caption hover:bg-bg transition-fast"
             >
               <span className="text-[10px] text-graphite">{format(day, "EEE")}</span>
               <span className="font-semibold">{format(day, "d")}</span>
@@ -157,26 +166,26 @@ export function TaskListLayout({ tasks, scope, onTaskClick, onToggleComplete, on
         })}
       </div>
 
-      {groups.length === 0 ? (
-        <p className="text-small text-graphite py-8 text-center">Nothing upcoming.</p>
-      ) : (
-        groups.map((group) => (
+      {weekDays.map((day) => {
+        const key = format(day, "yyyy-MM-dd");
+        const dayTasks = tasksByDay.get(key) ?? [];
+        return (
           <div
-            key={group.key}
+            key={key}
             ref={(el) => {
-              if (el) groupRefs.current.set(group.key, el);
-              else groupRefs.current.delete(group.key);
+              if (el) groupRefs.current.set(key, el);
+              else groupRefs.current.delete(key);
             }}
             className="border-t border-alabaster pt-3 mt-3 first:border-t-0 first:mt-0 first:pt-0"
           >
-            <h4 className="text-label text-graphite mb-1">{group.date ? formatGroupHeader(group.date) : "No date"}</h4>
-            {group.tasks.map((task) => (
+            <h4 className="text-label text-graphite mb-1">{formatGroupHeader(day)}</h4>
+            {dayTasks.map((task) => (
               <ListRow key={task.id} task={task} onTaskClick={onTaskClick} onToggleComplete={onToggleComplete} />
             ))}
-            <AddTaskRow onClick={() => onAddTask(group.date ? group.key : null)} />
+            <AddTaskRow onClick={() => onAddTask(key)} />
           </div>
-        ))
-      )}
+        );
+      })}
     </div>
   );
 }
