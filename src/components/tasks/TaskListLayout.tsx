@@ -97,7 +97,7 @@ export function TaskListLayout({ tasks, scope, onTaskClick, onToggleComplete, on
     );
   }
 
-  const weekDays = Array.from({ length: 6 }, (_, i) => addDays(weekStart, i));
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   const tasksByDay = new Map<string, Task[]>();
   for (const task of tasks) {
@@ -124,7 +124,7 @@ export function TaskListLayout({ tasks, scope, onTaskClick, onToggleComplete, on
     <div className="flex flex-col">
       <div className="flex items-center justify-between mb-3 gap-3">
         <span className="text-h3">
-          {format(weekStart, "MMM d")} – {format(addDays(weekStart, 5), "MMM d")}
+          {format(weekStart, "MMM d")} – {format(addDays(weekStart, 6), "MMM d")}
         </span>
         <div className="flex items-center gap-1 shrink-0">
           <button
