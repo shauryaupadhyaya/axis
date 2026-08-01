@@ -7,7 +7,7 @@ import { BodyMap } from "./BodyMap";
 import type { Workout, WorkoutExercise, WorkoutSet } from "@/lib/types";
 import type { MuscleGroup } from "@/lib/gym/exercise-library";
 import { computeTrainingTime, computeTrophies, computeVolumeSummary, computeWorkoutStats } from "@/lib/gym/analytics";
-import { computeMuscleRecoveryPercent } from "@/lib/gym/recovery";
+import { computeMuscleRecoveryPercent, groupRecoveryByRegion } from "@/lib/gym/recovery";
 import { computeSmartSuggestions } from "@/lib/gym/suggestions";
 
 function recoveryColor(percent: number): string {
@@ -30,6 +30,7 @@ export function GymInsights({
   const stats = computeWorkoutStats(workouts, exercises, sets);
   const trophies = computeTrophies(exercises, sets, workouts);
   const recovery = computeMuscleRecoveryPercent(exercises, sets);
+  const regionRecovery = groupRecoveryByRegion(recovery);
   const suggestions = computeSmartSuggestions(exercises, sets);
 
   const colorByMuscle: Partial<Record<MuscleGroup, string>> = {};
@@ -95,13 +96,13 @@ export function GymInsights({
       </Card>
 
       <Card className="lg:col-span-2">
-        <h3 className="text-h3 mb-3">Recovery insights</h3>
-        {recovery.length === 0 ? (
+        <h3 className="text-h3 mb-3">Recovery</h3>
+        {regionRecovery.length === 0 ? (
           <p className="text-small text-graphite py-2">No exercises logged yet.</p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {recovery.map((r) => (
-              <li key={r.muscleGroup} className="flex items-center justify-between gap-3">
+            {regionRecovery.map((r) => (
+              <li key={r.region} className="flex items-center justify-between gap-3">
                 <span className="text-small flex-1">{r.insight}</span>
                 <Badge variant={r.percent >= 80 ? "success" : r.percent >= 45 ? "warning" : "danger"}>{r.percent}%</Badge>
               </li>
@@ -115,7 +116,7 @@ export function GymInsights({
           <h3 className="text-h3 mb-3 flex items-center gap-2">
             <Lightbulb size={16} /> Smart suggestions
           </h3>
-          <p className="text-caption text-graphite mb-3">Rule-based, from your recent RPE and volume trends — not AI.</p>
+          <p className="text-caption text-graphite mb-3">Rule-based, from your recent weight and volume trends — not AI.</p>
           <ul className="flex flex-col gap-2">
             {suggestions.map((s) => (
               <li key={s.id} className="text-small rounded-lg bg-bg px-3 py-2">

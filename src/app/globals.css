@@ -224,6 +224,31 @@ body {
   animation: water-wave-drift 3.2s linear infinite;
 }
 
+@keyframes water-wave-drift-reverse {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(50%);
+  }
+}
+.animate-water-wave-reverse {
+  animation: water-wave-drift-reverse 4.6s linear infinite;
+}
+
+@keyframes water-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(0.6px);
+  }
+}
+.animate-water-bob {
+  animation: water-bob 4s ease-in-out infinite;
+}
+
 @keyframes ripple-pop {
   0% {
     transform: scale(0.3);
@@ -241,16 +266,16 @@ body {
 @keyframes glow-pulse {
   0%,
   100% {
-    opacity: 0.35;
+    opacity: 0.25;
     transform: scale(1);
   }
   50% {
-    opacity: 0.75;
-    transform: scale(1.06);
+    opacity: 0.5;
+    transform: scale(1.03);
   }
 }
 .animate-glow-pulse {
-  animation: glow-pulse 2.4s ease-in-out infinite;
+  animation: glow-pulse 3s ease-in-out infinite;
 }
 
 @keyframes particle-burst {
@@ -309,6 +334,40 @@ body {
 }
 .animate-rise {
   animation: rise 320ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes exercise-crossfade-a {
+  0%,
+  40% {
+    opacity: 1;
+  }
+  50%,
+  90% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.animate-exercise-crossfade-a {
+  animation: exercise-crossfade-a 2.6s ease-in-out infinite;
+}
+
+@keyframes exercise-crossfade-b {
+  0%,
+  40% {
+    opacity: 0;
+  }
+  50%,
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.animate-exercise-crossfade-b {
+  animation: exercise-crossfade-b 2.6s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

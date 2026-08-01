@@ -70,3 +70,59 @@ export function computeMuscleRecoveryPercent(
     return { muscleGroup, percent, hoursSinceTrained: Math.round(hoursSince), insight };
   });
 }
+
+export const RECOVERY_REGIONS = ["Chest", "Back", "Shoulders", "Arms", "Core", "Legs"] as const;
+export type RecoveryRegion = (typeof RECOVERY_REGIONS)[number];
+
+const REGION_BY_MUSCLE: Record<string, RecoveryRegion> = {
+  Chest: "Chest",
+  "Upper Chest": "Chest",
+  "Lower Chest": "Chest",
+  Back: "Back",
+  Lats: "Back",
+  Traps: "Back",
+  Rhomboids: "Back",
+  "Lower Back": "Back",
+  Shoulders: "Shoulders",
+  "Front Delts": "Shoulders",
+  "Side Delts": "Shoulders",
+  "Rear Delts": "Shoulders",
+  Neck: "Shoulders",
+  Biceps: "Arms",
+  Triceps: "Arms",
+  Forearms: "Arms",
+  Abs: "Core",
+  Obliques: "Core",
+  Glutes: "Legs",
+  Quads: "Legs",
+  Hamstrings: "Legs",
+  Calves: "Legs",
+  "Hip Flexors": "Legs",
+};
+
+export interface RegionRecoveryState {
+  region: RecoveryRegion;
+  percent: number;
+  insight: string;
+}
+
+/** Simplified "Chest/Back/Shoulders/Arms/Core/Legs" view for the at-a-glance recovery list. */
+export function groupRecoveryByRegion(states: MuscleRecoveryState[]): RegionRecoveryState[] {
+  const byRegion = new Map<RecoveryRegion, MuscleRecoveryState[]>();
+  for (const s of states) {
+    const region = REGION_BY_MUSCLE[s.muscleGroup];
+    if (!region) continue;
+    byRegion.set(region, [...(byRegion.get(region) ?? []), s]);
+  }
+
+  return RECOVERY_REGIONS.filter((r) => byRegion.has(r)).map((region) => {
+    const members = byRegion.get(region)!;
+    const percent = Math.round(members.reduce((sum, m) => sum + m.percent, 0) / members.length);
+    let insight: string;
+    if (percent >= 95) insight = `${region} fully recovered — ready to train.`;
+    else if (percent >= 70) insight = `${region} mostly recovered.`;
+    else if (percent >= 40) insight = `${region} still recovering — light work only.`;
+    else insight = `${region} may be overtrained — consider resting it.`;
+    return { region, percent, insight };
+  });
+}

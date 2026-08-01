@@ -6,6 +6,7 @@ import { Play, Plus, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ExerciseLibraryModal } from "./ExerciseLibraryModal";
 import type { WorkoutTemplate, WorkoutTemplateExercise } from "@/lib/types";
 import type { Exercise } from "@/lib/gym/exercise-library";
@@ -35,6 +36,7 @@ export function TemplateBuilder({
   const [newName, setNewName] = useState("");
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [confirmDeleteTemplate, setConfirmDeleteTemplate] = useState<string | null>(null);
 
   function handleCreate(name: string) {
     if (!name.trim()) return;
@@ -97,12 +99,12 @@ export function TemplateBuilder({
             const isOpen = expanded === t.id;
             return (
               <div key={t.id} className="rounded-lg border border-alabaster">
-                <div className="flex items-center justify-between px-3 py-2.5 cursor-pointer" onClick={() => setExpanded(isOpen ? null : t.id)}>
-                  <div>
-                    <p className="text-body font-medium">{t.name}</p>
+                <div className="flex items-center justify-between gap-2 px-3 py-2.5 cursor-pointer" onClick={() => setExpanded(isOpen ? null : t.id)}>
+                  <div className="min-w-0">
+                    <p className="text-body font-medium truncate">{t.name}</p>
                     <p className="text-[11px] text-graphite">{exs.length} exercises</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -116,7 +118,7 @@ export function TemplateBuilder({
                       aria-label="Delete template"
                       onClick={(e) => {
                         e.stopPropagation();
-                        startTransition(() => removeWorkoutTemplate(t.id));
+                        setConfirmDeleteTemplate(t.id);
                       }}
                     >
                       <X size={14} className="text-graphite" />
@@ -155,6 +157,14 @@ export function TemplateBuilder({
       {pickerFor && (
         <ExerciseLibraryModal favoriteIds={favoriteIds} onClose={() => setPickerFor(null)} onSelect={(ex) => handleSelectExercise(pickerFor, ex)} />
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteTemplate !== null}
+        title="Delete this template?"
+        message="This won't affect workouts you've already started from it."
+        onCancel={() => setConfirmDeleteTemplate(null)}
+        onConfirm={() => confirmDeleteTemplate && startTransition(() => removeWorkoutTemplate(confirmDeleteTemplate))}
+      />
     </Card>
   );
 }

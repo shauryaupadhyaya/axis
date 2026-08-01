@@ -19,7 +19,8 @@ interface WaterGlassProps {
   size?: number;
 }
 
-/** A premium animated "glass" of water: SVG wave fill, pour ripple on log, glow + particle burst at 100%. */
+/** A premium animated "glass" of water: layered SVG wave fill with continuous
+ * idle motion, a pour ripple on log, and a soft glow at 100%. */
 export function WaterGlass({ percent, pulseKey, size = 220 }: WaterGlassProps) {
   const clamped = Math.max(0, Math.min(100, percent));
   const complete = percent >= 100;
@@ -28,7 +29,7 @@ export function WaterGlass({ percent, pulseKey, size = 220 }: WaterGlassProps) {
   const [syncedPulseKey, setSyncedPulseKey] = useState(pulseKey);
   const [wasComplete, setWasComplete] = useState(complete);
 
-  // Both effects below are "derive state from a prop change" cases, not
+  // Both blocks below are "derive state from a prop change" cases, not
   // synchronization with an external system — handled during render (React's
   // sanctioned "adjusting state" pattern). The CSS animations end in their
   // own invisible final state (`forwards` fill), so no cleanup timer is
@@ -45,15 +46,16 @@ export function WaterGlass({ percent, pulseKey, size = 220 }: WaterGlassProps) {
     setWasComplete(complete);
     if (complete) {
       // Deterministic (not Math.random) spread — keeps the component pure
-      // during render while still reading as a natural particle burst.
+      // during render while still reading as a natural, restrained shimmer
+      // rather than a confetti burst.
       setParticles(
-        Array.from({ length: 14 }, (_, i) => {
-          const radius = 40 + ((i * 7) % 30);
+        Array.from({ length: 8 }, (_, i) => {
+          const radius = 34 + ((i * 9) % 22);
           return {
             id: i,
-            x: Math.round(Math.cos((i / 14) * Math.PI * 2) * radius),
-            y: Math.round(Math.sin((i / 14) * Math.PI * 2) * radius - 20),
-            delay: (i * 47) % 150,
+            x: Math.round(Math.cos((i / 8) * Math.PI * 2) * radius),
+            y: Math.round(Math.sin((i / 8) * Math.PI * 2) * radius - 16),
+            delay: (i * 60) % 140,
           };
         })
       );
@@ -66,7 +68,7 @@ export function WaterGlass({ percent, pulseKey, size = 220 }: WaterGlassProps) {
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
       {complete && (
         <div
-          className="absolute inset-[-10%] rounded-full bg-info/30 blur-2xl animate-glow-pulse"
+          className="absolute inset-[-8%] rounded-full bg-info/20 blur-2xl animate-glow-pulse"
           aria-hidden
         />
       )}
@@ -85,41 +87,43 @@ export function WaterGlass({ percent, pulseKey, size = 220 }: WaterGlassProps) {
             <stop offset="0%" stopColor="#60a5fa" />
             <stop offset="100%" stopColor="#2563eb" />
           </linearGradient>
+          <linearGradient id="glass-sheen" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.5)" />
+            <stop offset="35%" stopColor="rgba(255,255,255,0.05)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          </linearGradient>
         </defs>
 
-        {/* Glass outline: refraction-style double stroke for a "glass material" feel */}
-        <path
-          d="M 22 8 L 78 8 L 72 92 Q 50 98 28 92 Z"
-          fill="rgba(255,255,255,0.04)"
-          stroke="var(--border)"
-          strokeWidth="1.5"
-        />
-        <path d="M 26 10 L 30 10 L 25 88" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" />
+        {/* Glass body: soft sheen fill + refraction-style double stroke for a "glass material" feel */}
+        <path d="M 22 8 L 78 8 L 72 92 Q 50 98 28 92 Z" fill="url(#glass-sheen)" stroke="var(--border)" strokeWidth="1.5" />
 
-        <g clipPath="url(#glass-clip)">
+        <g clipPath="url(#glass-clip)" className="animate-water-bob" style={{ transformBox: "fill-box", transformOrigin: "center" }}>
           <rect
             x="0"
             y={waveY}
             width="100"
             height="100"
             fill="url(#water-fill)"
-            style={{ transition: "y 700ms cubic-bezier(0.2,0,0,1)" }}
+            style={{ transition: "y 800ms cubic-bezier(0.34,1.2,0.64,1)" }}
           />
-          {/* animated wave crest */}
+          {/* two overlapping wave crests at different speeds/opacities for depth */}
           <path
-            d={`M 0 ${waveY} Q 12.5 ${waveY - 2.5} 25 ${waveY} T 50 ${waveY} T 75 ${waveY} T 100 ${waveY} V ${waveY + 5} H 0 Z`}
-            fill="rgba(255,255,255,0.25)"
+            d={`M 0 ${waveY} Q 12.5 ${waveY - 3.5} 25 ${waveY} T 50 ${waveY} T 75 ${waveY} T 100 ${waveY} V ${waveY + 6} H 0 Z`}
+            fill="rgba(255,255,255,0.28)"
             className="animate-water-wave"
-            style={{ transition: "d 700ms cubic-bezier(0.2,0,0,1)" }}
+            style={{ transition: "d 800ms cubic-bezier(0.34,1.2,0.64,1)" }}
+          />
+          <path
+            d={`M 0 ${waveY} Q 16.7 ${waveY + 2.5} 33.3 ${waveY} T 66.7 ${waveY} T 100 ${waveY} V ${waveY + 6} H 0 Z`}
+            fill="rgba(255,255,255,0.16)"
+            className="animate-water-wave-reverse"
+            style={{ transition: "d 800ms cubic-bezier(0.34,1.2,0.64,1)" }}
           />
         </g>
 
-        <path
-          d="M 22 8 L 78 8 L 72 92 Q 50 98 28 92 Z"
-          fill="none"
-          stroke="var(--border)"
-          strokeWidth="1.5"
-        />
+        <path d="M 22 8 L 78 8 L 72 92 Q 50 98 28 92 Z" fill="none" stroke="var(--border)" strokeWidth="1.5" />
+        {/* highlight streak for a premium reflective look */}
+        <path d="M 27 11 L 31 11 L 26 86" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" />
 
         {ripples.map((r) => (
           <circle
@@ -128,10 +132,10 @@ export function WaterGlass({ percent, pulseKey, size = 220 }: WaterGlassProps) {
             cy={waveY}
             r="6"
             fill="none"
-            stroke="rgba(255,255,255,0.7)"
+            stroke="rgba(255,255,255,0.75)"
             strokeWidth="1"
             className="animate-ripple"
-            style={{ transformOrigin: `50px ${waveY}px` }}
+            style={{ transformBox: "fill-box", transformOrigin: "center" }}
           />
         ))}
       </svg>
@@ -143,7 +147,7 @@ export function WaterGlass({ percent, pulseKey, size = 220 }: WaterGlassProps) {
       {particles.map((p) => (
         <span
           key={p.id}
-          className="absolute w-1.5 h-1.5 rounded-full bg-info animate-particle"
+          className="absolute w-1 h-1 rounded-full bg-info animate-particle"
           style={
             {
               "--particle-x": `${p.x}px`,

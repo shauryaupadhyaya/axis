@@ -36,29 +36,20 @@ export function computeSmartSuggestions(exercises: WorkoutExercise[], sets: Work
     const sessions = [...bySessionDate.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1)).slice(0, 2);
     if (sessions.length < 2) continue;
 
-    const avgRpe = (setList: WorkoutSet[]) => {
-      const rpes = setList.map((s) => s.rpe).filter((r): r is number => r != null);
-      return rpes.length ? rpes.reduce((a, b) => a + b, 0) / rpes.length : null;
-    };
     const topWeight = (setList: WorkoutSet[]) => Math.max(...setList.map((s) => s.weight));
+    const topReps = (setList: WorkoutSet[]) => Math.max(...setList.map((s) => s.reps));
 
     const [recent, prior] = sessions;
-    const recentRpe = avgRpe(recent[1]);
-    const priorRpe = avgRpe(prior[1]);
+    const recentWeight = topWeight(recent[1]);
+    const priorWeight = topWeight(prior[1]);
 
-    if (recentRpe !== null && priorRpe !== null && recentRpe <= 7 && priorRpe <= 7) {
+    if (recentWeight >= priorWeight && topReps(recent[1]) >= topReps(prior[1]) && recentWeight === priorWeight) {
       suggestions.push({
         id: `progress-${name}`,
         kind: "progression",
-        message: `${name}: last two sessions felt easy (RPE ≤7) — try adding 2.5kg next time.`,
+        message: `${name}: matched or beat your reps at the same weight last two sessions — try adding 2.5kg next time.`,
       });
-    } else if (recentRpe !== null && priorRpe !== null && recentRpe >= 9 && priorRpe >= 9) {
-      suggestions.push({
-        id: `deload-${name}`,
-        kind: "deload",
-        message: `${name}: two straight sessions at RPE 9+ — consider a deload (reduce weight ~10%) next time.`,
-      });
-    } else if (topWeight(recent[1]) < topWeight(prior[1])) {
+    } else if (recentWeight < priorWeight) {
       suggestions.push({
         id: `deload-drop-${name}`,
         kind: "deload",

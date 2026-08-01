@@ -83,6 +83,43 @@ export async function logSet(
   revalidatePath("/health");
 }
 
+export async function deleteWorkout(workoutId: string) {
+  const { supabase, userId } = await requireUserId();
+  await supabase.from("workouts").delete().eq("id", workoutId).eq("user_id", userId);
+  revalidatePath("/health");
+}
+
+export async function removeWorkoutExercise(exerciseId: string) {
+  const { supabase, userId } = await requireUserId();
+  await supabase.from("workout_exercises").delete().eq("id", exerciseId).eq("user_id", userId);
+  revalidatePath("/health");
+}
+
+export async function reorderWorkoutExercises(orderedExerciseIds: string[]) {
+  const { supabase, userId } = await requireUserId();
+  await Promise.all(
+    orderedExerciseIds.map((id, position) =>
+      supabase.from("workout_exercises").update({ position }).eq("id", id).eq("user_id", userId)
+    )
+  );
+  revalidatePath("/health");
+}
+
+export async function updateWorkoutSet(setId: string, patch: { weight?: number; reps?: number }) {
+  const { supabase, userId } = await requireUserId();
+  const update: Record<string, number> = {};
+  if (patch.weight !== undefined) update.weight = patch.weight;
+  if (patch.reps !== undefined) update.reps = patch.reps;
+  await supabase.from("workout_sets").update(update).eq("id", setId).eq("user_id", userId);
+  revalidatePath("/health");
+}
+
+export async function deleteWorkoutSet(setId: string) {
+  const { supabase, userId } = await requireUserId();
+  await supabase.from("workout_sets").delete().eq("id", setId).eq("user_id", userId);
+  revalidatePath("/health");
+}
+
 export async function startWorkoutTimer(workoutId: string) {
   const { supabase, userId } = await requireUserId();
   await supabase

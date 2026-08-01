@@ -3,10 +3,13 @@
 import { useMemo, useState, useTransition } from "react";
 import { Home, Search, Star, X } from "lucide-react";
 import { BodyMap } from "./BodyMap";
+import { ExerciseDetailModal } from "./ExerciseDetailModal";
 import {
+  CATEGORY_LABELS,
   filterExercises,
   type Equipment,
   type Exercise,
+  type ExerciseCategory,
   type ExerciseDifficulty,
   type MuscleGroup,
 } from "@/lib/gym/exercise-library";
@@ -23,8 +26,10 @@ const EQUIPMENT_OPTIONS: Equipment[] = [
   "smith_machine",
   "ez_bar",
   "medicine_ball",
+  "trx",
 ];
 const DIFFICULTY_OPTIONS: ExerciseDifficulty[] = ["beginner", "intermediate", "advanced"];
+const CATEGORY_OPTIONS = Object.keys(CATEGORY_LABELS) as ExerciseCategory[];
 
 export function ExerciseLibraryModal({
   favoriteIds,
@@ -39,9 +44,11 @@ export function ExerciseLibraryModal({
   const [query, setQuery] = useState("");
   const [muscle, setMuscle] = useState<MuscleGroup | null>(null);
   const [equipment, setEquipment] = useState<Equipment | "">("");
+  const [category, setCategory] = useState<ExerciseCategory | "">("");
   const [difficulty, setDifficulty] = useState<ExerciseDifficulty | "">("");
   const [homeOnly, setHomeOnly] = useState(false);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [detailExercise, setDetailExercise] = useState<Exercise | null>(null);
 
   const results = useMemo(
     () =>
@@ -49,12 +56,13 @@ export function ExerciseLibraryModal({
         query,
         muscleGroup: muscle ?? undefined,
         equipment: equipment || undefined,
+        category: category || undefined,
         difficulty: difficulty || undefined,
         homeOnly,
         favoritesOnly,
         favoriteIds,
       }),
-    [query, muscle, equipment, difficulty, homeOnly, favoritesOnly, favoriteIds]
+    [query, muscle, equipment, category, difficulty, homeOnly, favoritesOnly, favoriteIds]
   );
 
   return (
@@ -67,16 +75,24 @@ export function ExerciseLibraryModal({
           </button>
         </div>
 
-        <div className="flex items-center gap-2 mb-3">
-          <div className="relative flex-1">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <div className="relative flex-1 min-w-[160px]">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-graphite" />
             <input
-              placeholder="Search exercises…"
+              placeholder="Search name, muscle, equipment…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="w-full pl-8 pr-3 py-2 text-small rounded-md border border-alabaster bg-bg"
             />
           </div>
+          <select value={category} onChange={(e) => setCategory(e.target.value as ExerciseCategory | "")} className="text-small px-2 py-2 rounded-md border border-alabaster bg-bg">
+            <option value="">All categories</option>
+            {CATEGORY_OPTIONS.map((c) => (
+              <option key={c} value={c}>
+                {CATEGORY_LABELS[c]}
+              </option>
+            ))}
+          </select>
           <select value={equipment} onChange={(e) => setEquipment(e.target.value as Equipment | "")} className="text-small px-2 py-2 rounded-md border border-alabaster bg-bg">
             <option value="">All equipment</option>
             {EQUIPMENT_OPTIONS.map((eq) => (
@@ -110,26 +126,27 @@ export function ExerciseLibraryModal({
         </div>
 
         <div className="flex gap-4 overflow-hidden flex-1">
-          <div className="hidden sm:block shrink-0">
+          <div className="hidden md:block shrink-0">
             <BodyMap selected={muscle} onSelectMuscle={(m) => setMuscle((cur) => (cur === m ? null : m))} />
           </div>
 
           <div className="flex-1 overflow-y-auto flex flex-col gap-1.5">
+            <p className="text-[11px] text-graphite px-1">{results.length.toLocaleString()} exercises</p>
             {results.length === 0 ? (
               <p className="text-small text-graphite text-center py-8">No exercises match those filters.</p>
             ) : (
-              results.map((ex) => {
+              results.slice(0, 200).map((ex) => {
                 const isFav = favoriteIds.has(ex.id);
                 return (
                   <div
                     key={ex.id}
                     className="flex items-center justify-between gap-2 rounded-lg border border-alabaster px-3 py-2 hover:border-tuscan cursor-pointer transition-fast"
-                    onClick={() => onSelect(ex)}
+                    onClick={() => setDetailExercise(ex)}
                   >
                     <div className="min-w-0">
                       <p className="text-small font-medium">{ex.name}</p>
                       <p className="text-[11px] text-graphite">
-                        {ex.primaryMuscle} · {ex.equipment.join(", ")} · {ex.difficulty}
+                        {ex.primaryMuscle} · {ex.equipment.join(", ").replace(/_/g, " ")} · {ex.difficulty}
                       </p>
                     </div>
                     <button
@@ -148,6 +165,18 @@ export function ExerciseLibraryModal({
           </div>
         </div>
       </div>
+
+      {detailExercise && (
+        <ExerciseDetailModal
+          exercise={detailExercise}
+          isFavorite={favoriteIds.has(detailExercise.id)}
+          onClose={() => setDetailExercise(null)}
+          onSelect={(ex) => {
+            onSelect(ex);
+            setDetailExercise(null);
+          }}
+        />
+      )}
     </div>
   );
 }

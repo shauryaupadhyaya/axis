@@ -2,15 +2,25 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Copy, Minus, Plus, SkipForward, Trophy } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Check, Copy, Minus, Pencil, Plus, SkipForward, Trash2, Trophy, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ExerciseLibraryModal } from "@/components/health/gym/ExerciseLibraryModal";
 import type { Workout, WorkoutExercise, WorkoutSet } from "@/lib/types";
 import type { Exercise } from "@/lib/gym/exercise-library";
 import { totalVolume } from "@/lib/gym";
-import { addExercise, finishWorkout, logSet, startWorkoutTimer } from "@/app/(app)/health/actions";
+import {
+  addExercise,
+  deleteWorkout,
+  deleteWorkoutSet,
+  finishWorkout,
+  logSet,
+  removeWorkoutExercise,
+  reorderWorkoutExercises,
+  startWorkoutTimer,
+  updateWorkoutSet,
+} from "@/app/(app)/health/actions";
 
 const REST_SECONDS = 90;
 
@@ -39,9 +49,15 @@ export function WorkoutSession({
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef<number>(0);
   const [restRemaining, setRestRemaining] = useState<number | null>(null);
-  const [draft, setDraft] = useState<Record<string, { weight: number; reps: number; rpe: number | ""; rir: number | "" }>>({});
+  const [draft, setDraft] = useState<Record<string, { weight: number; reps: number }>>({});
   const [pickerOpen, setPickerOpen] = useState(false);
   const [favoriteIds] = useState<Set<string>>(new Set());
+  const [editingSet, setEditingSet] = useState<{ id: string; weight: number; reps: number } | null>(null);
+  const [confirmDeleteSet, setConfirmDeleteSet] = useState<string | null>(null);
+  const [confirmRemoveExercise, setConfirmRemoveExercise] = useState<string | null>(null);
+  const [confirmDeleteWorkout, setConfirmDeleteWorkout] = useState(false);
+
+  const orderedExercises = [...exercises].sort((a, b) => a.position - b.position);
 
   useEffect(() => {
     if (!workout.started_at) startTransition(() => startWorkoutTimer(workout.id));
@@ -63,22 +79,16 @@ export function WorkoutSession({
   }, [restRemaining]);
 
   function getDraft(exerciseId: string) {
-    return draft[exerciseId] ?? { weight: 0, reps: 0, rpe: "", rir: "" };
+    return draft[exerciseId] ?? { weight: 0, reps: 0 };
   }
 
-  function updateDraft(exerciseId: string, patch: Partial<{ weight: number; reps: number; rpe: number | ""; rir: number | "" }>) {
+  function updateDraft(exerciseId: string, patch: Partial<{ weight: number; reps: number }>) {
     setDraft((d) => ({ ...d, [exerciseId]: { ...getDraft(exerciseId), ...patch } }));
   }
 
   function previousBest(exercise: WorkoutExercise) {
-    const priorSets = allSets.filter((s) => {
-      if (s.workout_exercise_id === exercise.id) return false; // this session's own exercise row is excluded via name match below
-      return s.completed && s.weight > 0;
-    });
-    // match by exercise name across other workouts
-    const sameName = allExercises
-      .filter((e) => e.name === exercise.name && e.id !== exercise.id)
-      .map((e) => e.id);
+    const priorSets = allSets.filter((s) => s.workout_exercise_id !== exercise.id && s.completed && s.weight > 0);
+    const sameName = allExercises.filter((e) => e.name === exercise.name && e.id !== exercise.id).map((e) => e.id);
     const candidates = priorSets.filter((s) => sameName.includes(s.workout_exercise_id));
     if (candidates.length === 0) return null;
     return [...candidates].sort((a, b) => b.weight - a.weight)[0];
@@ -92,12 +102,7 @@ export function WorkoutSession({
   function handleLogSet(exercise: WorkoutExercise) {
     const d = getDraft(exercise.id);
     const existingSets = sets.filter((s) => s.workout_exercise_id === exercise.id);
-    startTransition(() =>
-      logSet(exercise.id, existingSets.length + 1, d.weight, d.reps, {
-        rpe: d.rpe === "" ? null : d.rpe,
-        rir: d.rir === "" ? null : d.rir,
-      })
-    );
+    startTransition(() => logSet(exercise.id, existingSets.length + 1, d.weight, d.reps));
     setRestRemaining(REST_SECONDS);
   }
 
@@ -105,13 +110,22 @@ export function WorkoutSession({
     const existingSets = sets.filter((s) => s.workout_exercise_id === exercise.id);
     const last = existingSets[existingSets.length - 1];
     if (!last) return;
-    startTransition(() => logSet(exercise.id, existingSets.length + 1, last.weight, last.reps, { rpe: last.rpe, rir: last.rir }));
+    startTransition(() => logSet(exercise.id, existingSets.length + 1, last.weight, last.reps));
     setRestRemaining(REST_SECONDS);
   }
 
   function handleSelectExercise(ex: Exercise) {
     startTransition(() => addExercise(workout.id, ex.name, ex.primaryMuscle, ex.id));
     setPickerOpen(false);
+  }
+
+  function handleMove(exerciseId: string, direction: "up" | "down") {
+    const index = orderedExercises.findIndex((e) => e.id === exerciseId);
+    const swapWith = direction === "up" ? index - 1 : index + 1;
+    if (swapWith < 0 || swapWith >= orderedExercises.length) return;
+    const reordered = [...orderedExercises];
+    [reordered[index], reordered[swapWith]] = [reordered[swapWith], reordered[index]];
+    startTransition(() => reorderWorkoutExercises(reordered.map((e) => e.id)));
   }
 
   const volume = totalVolume(sets);
@@ -124,6 +138,13 @@ export function WorkoutSession({
         </button>
         <h1 className="text-h2 flex-1">{workout.name}</h1>
         <span className="text-mono text-display">{formatElapsed(elapsed)}</span>
+        <button
+          onClick={() => setConfirmDeleteWorkout(true)}
+          aria-label="Delete workout"
+          className="text-graphite hover:text-danger transition-fast"
+        >
+          <Trash2 size={18} />
+        </button>
       </header>
 
       <div className="p-5 flex flex-col gap-4">
@@ -133,19 +154,44 @@ export function WorkoutSession({
           </div>
         )}
 
-        {exercises.map((exercise) => {
+        {orderedExercises.map((exercise, index) => {
           const exerciseSets = sets.filter((s) => s.workout_exercise_id === exercise.id);
           const d = getDraft(exercise.id);
           const prevBest = previousBest(exercise);
           return (
             <Card key={exercise.id}>
-              <div className="flex items-center justify-between mb-1">
-                <h3 className="text-h3">{exercise.name}</h3>
-                {d.weight > 0 && isPr(exercise, d.weight) && (
-                  <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-tuscan text-carbon font-semibold uppercase">
-                    <Trophy size={10} /> PR pace
-                  </span>
-                )}
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <h3 className="text-h3 min-w-0 truncate">{exercise.name}</h3>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {d.weight > 0 && isPr(exercise, d.weight) && (
+                    <span className="hidden sm:flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-tuscan text-carbon font-semibold uppercase">
+                      <Trophy size={10} /> PR pace
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleMove(exercise.id, "up")}
+                    disabled={index === 0}
+                    aria-label="Move exercise up"
+                    className="w-6 h-6 rounded border border-alabaster flex items-center justify-center disabled:opacity-30"
+                  >
+                    <ArrowUp size={12} />
+                  </button>
+                  <button
+                    onClick={() => handleMove(exercise.id, "down")}
+                    disabled={index === orderedExercises.length - 1}
+                    aria-label="Move exercise down"
+                    className="w-6 h-6 rounded border border-alabaster flex items-center justify-center disabled:opacity-30"
+                  >
+                    <ArrowDown size={12} />
+                  </button>
+                  <button
+                    onClick={() => setConfirmRemoveExercise(exercise.id)}
+                    aria-label="Remove exercise"
+                    className="w-6 h-6 rounded border border-alabaster flex items-center justify-center text-graphite hover:text-danger"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
               </div>
               <p className="text-caption text-graphite mb-1">
                 {exerciseSets.length} sets logged · {exercise.muscle_group}
@@ -158,14 +204,60 @@ export function WorkoutSession({
 
               {exerciseSets.length > 0 && (
                 <div className="mb-3">
-                  {exerciseSets.map((set) => (
-                    <div key={set.id} className="flex items-center gap-3 py-1.5 text-small opacity-60">
-                      <span className="w-10">Set {set.set_number}</span>
-                      <span className="text-mono">{set.weight}kg</span>
-                      <span className="text-mono">{set.reps} reps</span>
-                      {set.rpe != null && <span className="text-mono text-[11px]">RPE {set.rpe}</span>}
-                    </div>
-                  ))}
+                  {exerciseSets.map((set, setIndex) =>
+                    editingSet?.id === set.id ? (
+                      <div key={set.id} className="flex items-center gap-2 py-1.5 text-small">
+                        <span className="w-10 shrink-0">Set {setIndex + 1}</span>
+                        <input
+                          type="number"
+                          value={editingSet.weight}
+                          onChange={(e) => setEditingSet({ ...editingSet, weight: Number(e.target.value) })}
+                          className="w-16 px-1.5 py-1 rounded border border-alabaster bg-bg text-mono text-small"
+                        />
+                        <span className="text-caption text-graphite">kg ×</span>
+                        <input
+                          type="number"
+                          value={editingSet.reps}
+                          onChange={(e) => setEditingSet({ ...editingSet, reps: Number(e.target.value) })}
+                          className="w-14 px-1.5 py-1 rounded border border-alabaster bg-bg text-mono text-small"
+                        />
+                        <button
+                          aria-label="Save set"
+                          onClick={() => {
+                            startTransition(() => updateWorkoutSet(set.id, { weight: editingSet.weight, reps: editingSet.reps }));
+                            setEditingSet(null);
+                          }}
+                          className="text-success"
+                        >
+                          <Check size={16} />
+                        </button>
+                        <button aria-label="Cancel edit" onClick={() => setEditingSet(null)} className="text-graphite">
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div key={set.id} className="group flex items-center gap-3 py-1.5 text-small">
+                        <span className="w-10 opacity-60">Set {setIndex + 1}</span>
+                        <span className="text-mono opacity-60">{set.weight}kg</span>
+                        <span className="text-mono opacity-60">{set.reps} reps</span>
+                        <span className="flex-1" />
+                        <button
+                          aria-label="Edit set"
+                          onClick={() => setEditingSet({ id: set.id, weight: set.weight, reps: set.reps })}
+                          className="opacity-0 group-hover:opacity-100 text-graphite hover:text-text transition-fast"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          aria-label="Delete set"
+                          onClick={() => setConfirmDeleteSet(set.id)}
+                          className="opacity-0 group-hover:opacity-100 text-graphite hover:text-danger transition-fast"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    )
+                  )}
                 </div>
               )}
 
@@ -194,20 +286,6 @@ export function WorkoutSession({
                     </button>
                   </div>
                 </div>
-                <Input
-                  label="RPE"
-                  type="number"
-                  value={d.rpe}
-                  onChange={(e) => updateDraft(exercise.id, { rpe: e.target.value === "" ? "" : Number(e.target.value) })}
-                  className="w-16"
-                />
-                <Input
-                  label="RIR"
-                  type="number"
-                  value={d.rir}
-                  onChange={(e) => updateDraft(exercise.id, { rir: e.target.value === "" ? "" : Number(e.target.value) })}
-                  className="w-16"
-                />
                 <Button onClick={() => handleLogSet(exercise)} className="flex-1 min-w-[120px]">
                   Log set
                 </Button>
@@ -226,7 +304,7 @@ export function WorkoutSession({
         })}
 
         <Button variant="secondary" onClick={() => setPickerOpen(true)} className="flex items-center justify-center gap-2">
-          <Plus size={16} /> Add exercise from library
+          <Plus size={16} /> Add exercise
         </Button>
 
         <div className="flex items-center justify-between">
@@ -242,6 +320,31 @@ export function WorkoutSession({
       {pickerOpen && (
         <ExerciseLibraryModal favoriteIds={favoriteIds} onClose={() => setPickerOpen(false)} onSelect={handleSelectExercise} />
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteSet !== null}
+        title="Delete this set?"
+        message="This log entry will be permanently removed."
+        onCancel={() => setConfirmDeleteSet(null)}
+        onConfirm={() => confirmDeleteSet && startTransition(() => deleteWorkoutSet(confirmDeleteSet))}
+      />
+      <ConfirmDialog
+        open={confirmRemoveExercise !== null}
+        title="Remove this exercise?"
+        message="All sets logged for this exercise in this workout will be removed too."
+        onCancel={() => setConfirmRemoveExercise(null)}
+        onConfirm={() => confirmRemoveExercise && startTransition(() => removeWorkoutExercise(confirmRemoveExercise))}
+      />
+      <ConfirmDialog
+        open={confirmDeleteWorkout}
+        title="Delete this workout?"
+        message="This will permanently delete the workout and everything logged in it."
+        onCancel={() => setConfirmDeleteWorkout(false)}
+        onConfirm={() => {
+          startTransition(() => deleteWorkout(workout.id));
+          router.push("/health");
+        }}
+      />
     </div>
   );
 }
