@@ -160,12 +160,29 @@ export interface WaterLog {
   logged_at: string;
 }
 
+export type ActivityLevel = "sedentary" | "light" | "moderate" | "active" | "very_active";
+
 export interface UserSettings {
   user_id: string;
   water_goal_ml: number;
+  age: number | null;
+  weight_kg: number | null;
+  height_cm: number | null;
+  activity_level: ActivityLevel;
+  preferred_container_ml: number;
+}
+
+export interface WaterContainer {
+  id: string;
+  user_id: string;
+  name: string;
+  volume_ml: number;
+  icon: string;
+  position: number;
 }
 
 export type WorkoutStatus = "scheduled" | "completed" | "skipped";
+export type SetType = "standard" | "superset" | "dropset" | "giant_set" | "circuit" | "amrap" | "emom";
 
 export interface Workout {
   id: string;
@@ -173,6 +190,10 @@ export interface Workout {
   name: string;
   scheduled_date: string;
   status: WorkoutStatus;
+  template_id: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  notes: string | null;
 }
 
 export interface WorkoutExercise {
@@ -182,6 +203,10 @@ export interface WorkoutExercise {
   name: string;
   muscle_group: string;
   position: number;
+  exercise_id: string | null;
+  set_type: SetType;
+  group_key: string | null;
+  notes: string | null;
 }
 
 export interface WorkoutSet {
@@ -193,6 +218,71 @@ export interface WorkoutSet {
   reps: number;
   completed: boolean;
   logged_at: string | null;
+  duration_seconds: number | null;
+  distance_m: number | null;
+  rpe: number | null;
+  rir: number | null;
+  tempo: string | null;
+  notes: string | null;
+}
+
+export interface ExerciseFavorite {
+  id: string;
+  user_id: string;
+  exercise_id: string;
+  created_at: string;
+}
+
+export interface WorkoutTemplate {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+}
+
+export interface WorkoutTemplateExercise {
+  id: string;
+  template_id: string;
+  user_id: string;
+  exercise_id: string | null;
+  custom_name: string | null;
+  muscle_group: string;
+  set_type: SetType;
+  group_key: string | null;
+  target_sets: number;
+  target_reps: string;
+  notes: string | null;
+  position: number;
+}
+
+export type ProgressPhotoCategory = "gym" | "weight_loss" | "muscle_gain" | "skincare" | "face" | "custom";
+export type ProgressPhotoAngle = "front" | "left" | "right" | "back" | "other";
+
+export interface ProgressPhoto {
+  id: string;
+  user_id: string;
+  category: ProgressPhotoCategory;
+  custom_category: string | null;
+  angle: ProgressPhotoAngle;
+  storage_path: string;
+  caption: string | null;
+  taken_at: string;
+  created_at: string;
+}
+
+export interface BodyMeasurement {
+  id: string;
+  user_id: string;
+  logged_date: string;
+  weight_kg: number | null;
+  body_fat_pct: number | null;
+  chest_cm: number | null;
+  waist_cm: number | null;
+  arms_cm: number | null;
+  thighs_cm: number | null;
+  neck_cm: number | null;
+  created_at: string;
 }
 
 export interface NoteFolder {
@@ -215,7 +305,29 @@ export interface Note {
   updated_at: string;
 }
 
-export type SkincarePeriod = "am" | "pm";
+export type SkincarePeriod =
+  | "am"
+  | "pm"
+  | "weekly"
+  | "monthly"
+  | "mask"
+  | "eye_mask"
+  | "hair"
+  | "lip"
+  | "foot"
+  | "nail"
+  | "custom";
+
+export type SkincareStepType =
+  | "cleanser"
+  | "toner"
+  | "serum"
+  | "moisturizer"
+  | "sunscreen"
+  | "retinol"
+  | "exfoliant"
+  | "mask"
+  | "other";
 
 export interface SkincareStep {
   id: string;
@@ -223,6 +335,12 @@ export interface SkincareStep {
   period: SkincarePeriod;
   name: string;
   position: number;
+  routine_name: string | null;
+  step_type: SkincareStepType;
+  duration_seconds: number;
+  instructions: string | null;
+  product_id: string | null;
+  notes: string | null;
 }
 
 export interface SkincareCompletion {
@@ -230,4 +348,32 @@ export interface SkincareCompletion {
   step_id: string;
   user_id: string;
   completed_at: string;
+}
+
+export interface SkincareProduct {
+  id: string;
+  user_id: string;
+  name: string;
+  brand: string | null;
+  product_type: SkincareStepType;
+  ingredients: string | null;
+  purchase_date: string | null;
+  expiry_date: string | null;
+  image_url: string | null;
+  created_at: string;
+}
+
+export interface SkinJournalEntry {
+  id: string;
+  user_id: string;
+  logged_date: string;
+  acne: number;
+  redness: number;
+  dryness: number;
+  oiliness: number;
+  irritation: number;
+  sensitivity: number;
+  mood: string | null;
+  notes: string | null;
+  created_at: string;
 }

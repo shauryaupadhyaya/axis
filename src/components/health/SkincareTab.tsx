@@ -1,124 +1,126 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Plus, X } from "lucide-react";
+import { useState } from "react";
 import { Card } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
-import type { SkincareCompletion, SkincarePeriod, SkincareStep } from "@/lib/types";
+import { ProgressRing } from "@/components/ui/ProgressRing";
+import { Badge } from "@/components/ui/Badge";
+import { RoutineSection } from "./skincare/RoutineSection";
+import { ProductDatabase } from "./skincare/ProductDatabase";
+import { SkinJournal } from "./skincare/SkinJournal";
+import type { SkincareCompletion, SkincarePeriod, SkincareProduct, SkincareStep, SkinJournalEntry } from "@/lib/types";
 import { toISODate } from "@/lib/scores";
-import { addSkincareStep, removeSkincareStep, toggleSkincareStepToday } from "@/app/(app)/health/actions";
-
-function computeStreak(completedDates: Set<string>): number {
-  let streak = 0;
-  const cursor = new Date();
-  cursor.setHours(0, 0, 0, 0);
-  if (!completedDates.has(toISODate(cursor))) cursor.setDate(cursor.getDate() - 1);
-  while (completedDates.has(toISODate(cursor))) {
-    streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return streak;
-}
+import {
+  PERIOD_LABELS,
+  SPECIALIZED_PERIODS,
+  computeAchievements,
+  computeSkinScore,
+  computeSkincareStreak,
+  groupStepsByPeriod,
+  todaysCompletionPercent,
+} from "@/lib/skincare";
 
 export function SkincareTab({
   steps,
   completions,
+  products = [],
+  journalEntries = [],
 }: {
   steps: SkincareStep[];
   completions: SkincareCompletion[];
+  products?: SkincareProduct[];
+  journalEntries?: SkinJournalEntry[];
 }) {
-  const [, startTransition] = useTransition();
-  const [newStepName, setNewStepName] = useState<Record<SkincarePeriod, string>>({ am: "", pm: "" });
-  const today = toISODate(new Date());
+  const [specializedOpen, setSpecializedOpen] = useState<Set<SkincarePeriod>>(
+    () => new Set(SPECIALIZED_PERIODS.filter((p) => steps.some((s) => s.period === p)))
+  );
 
-  const completionsByStep = new Map<string, Set<string>>();
-  for (const c of completions) {
-    if (!completionsByStep.has(c.step_id)) completionsByStep.set(c.step_id, new Set());
-    completionsByStep.get(c.step_id)!.add(c.completed_at);
-  }
+  const grouped = groupStepsByPeriod(steps);
+  const streak = computeSkincareStreak(steps, completions);
+  const completionPct = todaysCompletionPercent(steps, completions);
+  const latestJournal = [...journalEntries].sort((a, b) => (a.logged_date < b.logged_date ? 1 : -1))[0] ?? null;
+  const skinScore = computeSkinScore(latestJournal, completionPct);
+  const achievements = computeAchievements(streak);
 
   const allCompletedDates = new Set(completions.map((c) => c.completed_at));
-  const streak = computeStreak(allCompletedDates);
-
   const last30 = Array.from({ length: 30 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (29 - i));
     return toISODate(d);
   });
 
-  function renderPeriod(period: SkincarePeriod, label: string) {
-    const periodSteps = steps.filter((s) => s.period === period);
-    return (
-      <Card>
-        <h3 className="text-h3 mb-3">{label}</h3>
-        <ul className="flex flex-col gap-2 mb-3">
-          {periodSteps.map((step) => {
-            const done = completionsByStep.get(step.id)?.has(today) ?? false;
-            return (
-              <li key={step.id} className="flex items-center gap-2">
-                <button
-                  onClick={() => startTransition(() => toggleSkincareStepToday(step.id, !done))}
-                  className={`w-5 h-5 rounded-full border-2 shrink-0 transition-fast ${
-                    done ? "bg-success border-success" : "border-alabaster"
-                  }`}
-                  aria-label={done ? "Mark not done" : "Mark done"}
-                />
-                <span className={`flex-1 text-body ${done ? "opacity-50" : ""}`}>{step.name}</span>
-                <button
-                  aria-label="Remove step"
-                  onClick={() => startTransition(() => removeSkincareStep(step.id))}
-                >
-                  <X size={14} className="text-graphite" />
-                </button>
-              </li>
-            );
-          })}
-          {periodSteps.length === 0 && <p className="text-small text-graphite">No steps yet.</p>}
-        </ul>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!newStepName[period].trim()) return;
-            startTransition(() => addSkincareStep(period, newStepName[period]));
-            setNewStepName((s) => ({ ...s, [period]: "" }));
-          }}
-          className="flex gap-2"
-        >
-          <Input
-            placeholder="Add step…"
-            value={newStepName[period]}
-            onChange={(e) => setNewStepName((s) => ({ ...s, [period]: e.target.value }))}
-            className="flex-1"
-          />
-          <Button type="submit" variant="icon" aria-label={`Add ${period} step`}>
-            <Plus size={16} />
-          </Button>
-        </form>
-      </Card>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {renderPeriod("am", "AM routine")}
-        {renderPeriod("pm", "PM routine")}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <Card className="flex flex-col items-center text-center">
+          <ProgressRing percent={completionPct} size={100} />
+          <p className="text-caption text-graphite mt-2">Today&apos;s completion</p>
+        </Card>
+        <Card className="flex flex-col items-center justify-center text-center">
+          <p className="text-display">{streak}</p>
+          <p className="text-caption text-graphite">day streak</p>
+        </Card>
+        <Card className="flex flex-col items-center justify-center text-center">
+          <p className="text-display">{skinScore}</p>
+          <p className="text-caption text-graphite">skin score</p>
+        </Card>
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <RoutineSection period="am" label={PERIOD_LABELS.am} steps={grouped.get("am") ?? []} completions={completions} products={products} />
+        <RoutineSection period="pm" label={PERIOD_LABELS.pm} steps={grouped.get("pm") ?? []} completions={completions} products={products} />
+      </div>
+
+      <Card>
+        <h3 className="text-h3 mb-3">Achievements</h3>
+        <div className="flex flex-wrap gap-2">
+          {achievements.map((a) => (
+            <Badge key={a.id} variant={a.unlocked ? "success" : "neutral"} className={a.unlocked ? "animate-pop-in" : "opacity-50"}>
+              {a.label}
+            </Badge>
+          ))}
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <RoutineSection period="weekly" label={PERIOD_LABELS.weekly} steps={grouped.get("weekly") ?? []} completions={completions} products={products} />
+        <RoutineSection period="monthly" label={PERIOD_LABELS.monthly} steps={grouped.get("monthly") ?? []} completions={completions} products={products} />
+      </div>
+
+      <Card>
+        <h3 className="text-h3 mb-3">Specialized care</h3>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {SPECIALIZED_PERIODS.map((p) => (
+            <button
+              key={p}
+              onClick={() => setSpecializedOpen((s) => new Set(s).add(p))}
+              className={`text-caption px-3 py-1.5 rounded-full border transition-fast ${
+                specializedOpen.has(p) ? "border-tuscan bg-tuscan/15" : "border-alabaster hover:bg-bg"
+              }`}
+            >
+              {PERIOD_LABELS[p]}
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[...specializedOpen].map((p) => (
+            <RoutineSection key={p} period={p} label={PERIOD_LABELS[p]} steps={grouped.get(p) ?? []} completions={completions} products={products} />
+          ))}
+        </div>
+      </Card>
+
+      <SkinJournal entries={journalEntries} />
+      <ProductDatabase products={products} />
 
       <Card>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-h3">Completion (30 days)</h3>
-          <span className="text-mono text-graphite">{streak} day streak</span>
         </div>
         <div className="grid grid-cols-10 gap-1.5">
           {last30.map((day) => (
             <div
               key={day}
               title={day}
-              className={`w-full aspect-square rounded ${
-                allCompletedDates.has(day) ? "bg-success" : "bg-alabaster/20"
-              }`}
+              className={`w-full aspect-square rounded ${allCompletedDates.has(day) ? "bg-success" : "bg-alabaster/20"}`}
             />
           ))}
         </div>

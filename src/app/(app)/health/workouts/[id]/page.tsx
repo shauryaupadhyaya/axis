@@ -21,7 +21,19 @@ export default async function WorkoutSessionPage({
 
   const exercises = (exercisesRes.data as WorkoutExercise[]) ?? [];
   const exerciseIds = new Set(exercises.map((e) => e.id));
-  const sets = ((setsRes.data as WorkoutSet[]) ?? []).filter((s) => exerciseIds.has(s.workout_exercise_id));
+  const allSets = (setsRes.data as WorkoutSet[]) ?? [];
+  const sets = allSets.filter((s) => exerciseIds.has(s.workout_exercise_id));
 
-  return <WorkoutSession workout={workoutRes.data as Workout} exercises={exercises} sets={sets} />;
+  // previousBest in WorkoutSession needs sibling workout_exercises rows sharing the same name to compare against.
+  const allExercisesRes = await supabase.from("workout_exercises").select("*");
+
+  return (
+    <WorkoutSession
+      workout={workoutRes.data as Workout}
+      exercises={exercises}
+      sets={sets}
+      allSets={allSets}
+      allExercises={(allExercisesRes.data as WorkoutExercise[]) ?? exercises}
+    />
+  );
 }
