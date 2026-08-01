@@ -110,16 +110,28 @@ export interface CalendarEventRow {
   created_at: string;
 }
 
+export interface Subject {
+  id: string;
+  user_id: string;
+  name: string;
+  icon: string | null;
+  color: string | null;
+  syllabus_text: string | null;
+  created_at: string;
+}
+
 export interface Exam {
   id: string;
   user_id: string;
-  subject_name: string;
+  subject_id: string;
+  name: string;
   exam_date: string;
-  chapters_total: number;
-  chapters_mastered: number;
+  chapters_covered: string[];
+  weightage: number | null;
+  notes: string | null;
 }
 
-export type ChapterStatus = "not_started" | "learning" | "revised" | "mastered";
+export type ChapterStatus = "not_started" | "learning" | "in_progress" | "revised_once" | "revised_twice" | "mastered";
 
 export interface Chapter {
   id: string;
@@ -130,17 +142,21 @@ export interface Chapter {
   position: number;
   last_revised_at: string | null;
   revision_frequency_days: number;
+  revision_count: number;
 }
+
+export type HomeworkStatus = "not_started" | "in_progress" | "completed";
 
 export interface Homework {
   id: string;
   user_id: string;
   subject_id: string;
+  chapter_id: string | null;
   title: string;
   description: string | null;
   due_at: string | null;
   priority: Priority;
-  done: boolean;
+  status: HomeworkStatus;
   created_at: string;
 }
 
@@ -151,6 +167,46 @@ export interface StudySession {
   chapter_id: string | null;
   minutes: number;
   logged_at: string;
+}
+
+export interface PomodoroSession {
+  id: string;
+  user_id: string;
+  subject_id: string | null;
+  chapter_id: string | null;
+  note_id: string | null;
+  planned_minutes: number;
+  actual_minutes: number;
+  completed: boolean;
+  started_at: string;
+  ended_at: string | null;
+}
+
+export type FlashcardStatus = "learning" | "reviewing" | "mastered";
+
+export interface Flashcard {
+  id: string;
+  user_id: string;
+  subject_id: string | null;
+  chapter_id: string | null;
+  note_id: string | null;
+  front: string;
+  back: string;
+  status: FlashcardStatus;
+  review_count: number;
+  last_reviewed_at: string | null;
+  created_at: string;
+}
+
+export interface StudyAttachment {
+  id: string;
+  user_id: string;
+  chapter_id: string;
+  file_name: string;
+  storage_path: string;
+  size_bytes: number;
+  mime_type: string | null;
+  created_at: string;
 }
 
 export interface WaterLog {
@@ -290,6 +346,7 @@ export interface NoteFolder {
   user_id: string;
   name: string;
   position: number;
+  parent_folder_id: string | null;
 }
 
 export interface Note {

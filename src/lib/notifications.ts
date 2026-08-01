@@ -58,16 +58,18 @@ export function buildNotifications(snapshot: AppSnapshot, now = new Date()): App
     }
   }
 
+  const subjectNameById = new Map(snapshot.subjects.map((s) => [s.id, s.name]));
   for (const exam of snapshot.exams) {
     const due = new Date(exam.exam_date);
     const diff = due.getTime() - now.getTime();
     if (diff >= 0 && diff < 3 * DAY_MS) {
+      const subjectName = subjectNameById.get(exam.subject_id) ?? "Exam";
       notifications.push({
         id: `exam-${exam.id}`,
         title: "Upcoming exam",
-        body: `${exam.subject_name} in ${Math.max(1, Math.ceil(diff / DAY_MS))} day(s)`,
+        body: `${subjectName} — ${exam.name} in ${Math.max(1, Math.ceil(diff / DAY_MS))} day(s)`,
         severity: "warning",
-        href: `/study/${exam.id}`,
+        href: `/study/${exam.subject_id}`,
       });
     }
   }

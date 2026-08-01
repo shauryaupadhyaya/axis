@@ -20,6 +20,7 @@ import type {
   HabitCompletion,
   Homework,
   StudySession,
+  Subject,
   Task,
   Workout,
 } from "@/lib/types";
@@ -37,6 +38,7 @@ interface CalendarViewProps {
   tasks: Task[];
   workouts: Workout[];
   exams: Exam[];
+  subjects: Subject[];
   studySessions: StudySession[];
   habits: Habit[];
   habitCompletions: HabitCompletion[];
@@ -48,6 +50,7 @@ export function CalendarView({
   tasks,
   workouts,
   exams,
+  subjects,
   studySessions,
   habits,
   habitCompletions,
@@ -69,13 +72,14 @@ export function CalendarView({
         tasks,
         workouts,
         exams,
+        subjects,
         studySessions,
         habits,
         habitCompletions,
         homework,
         calendarEvents,
       }),
-    [tasks, workouts, exams, studySessions, habits, habitCompletions, homework, calendarEvents]
+    [tasks, workouts, exams, subjects, studySessions, habits, habitCompletions, homework, calendarEvents]
   );
 
   function handleAddEvent(e: React.FormEvent) {

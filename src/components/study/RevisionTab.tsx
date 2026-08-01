@@ -3,8 +3,10 @@
 import { useState, useTransition } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import type { Chapter } from "@/lib/types";
 import { logRevisionSession } from "@/app/(app)/study/actions";
+import { CHAPTER_STATUS_LABEL } from "@/lib/study";
 
 function nextDueDate(chapter: Chapter): Date | null {
   if (!chapter.last_revised_at) return null;
@@ -28,7 +30,11 @@ export function RevisionTab({ subjectId, chapters }: { subjectId: string; chapte
         const overdue = nextDue ? nextDue < new Date() : false;
         return (
           <Card key={chapter.id}>
-            <h3 className="text-h3 mb-2">{chapter.name}</h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-h3">{chapter.name}</h3>
+              <Badge variant="neutral">{CHAPTER_STATUS_LABEL[chapter.status]}</Badge>
+            </div>
+            <p className="text-small text-graphite">Revised {chapter.revision_count} time{chapter.revision_count === 1 ? "" : "s"}</p>
             <p className="text-small text-graphite">
               Last revised:{" "}
               {chapter.last_revised_at

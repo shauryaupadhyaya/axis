@@ -7,6 +7,7 @@ import type {
   HabitCompletion,
   Homework,
   StudySession,
+  Subject,
   Task,
   Workout,
 } from "@/lib/types";
@@ -14,11 +15,12 @@ import type {
 export default async function CalendarPage() {
   const supabase = await createClient();
 
-  const [tasksRes, workoutsRes, examsRes, studyRes, habitsRes, completionsRes, homeworkRes, eventsRes] =
+  const [tasksRes, workoutsRes, examsRes, subjectsRes, studyRes, habitsRes, completionsRes, homeworkRes, eventsRes] =
     await Promise.all([
       supabase.from("tasks").select("*").is("parent_task_id", null),
       supabase.from("workouts").select("*"),
       supabase.from("exams").select("*"),
+      supabase.from("subjects").select("*"),
       supabase.from("study_sessions").select("*"),
       supabase.from("habits").select("*"),
       supabase.from("habit_completions").select("*"),
@@ -31,6 +33,7 @@ export default async function CalendarPage() {
       tasks={(tasksRes.data as Task[]) ?? []}
       workouts={(workoutsRes.data as Workout[]) ?? []}
       exams={(examsRes.data as Exam[]) ?? []}
+      subjects={(subjectsRes.data as Subject[]) ?? []}
       studySessions={(studyRes.data as StudySession[]) ?? []}
       habits={(habitsRes.data as Habit[]) ?? []}
       habitCompletions={(completionsRes.data as HabitCompletion[]) ?? []}

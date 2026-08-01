@@ -2,7 +2,7 @@ import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildNotifications } from "@/lib/notifications";
 import type { AppSnapshot } from "@/lib/app-snapshot";
-import type { CalendarEventRow, Exam, Habit, HabitCompletion, Homework, Task } from "@/lib/types";
+import type { CalendarEventRow, Exam, Habit, HabitCompletion, Homework, Subject, Task } from "@/lib/types";
 
 const RESEND_INTERVAL_MS = 60 * 60 * 1000; // don't re-notify the same user more than once an hour
 
@@ -35,9 +35,10 @@ export async function GET(request: Request) {
     const lastNotified = settings?.last_notified_at ? new Date(settings.last_notified_at) : null;
     if (lastNotified && now.getTime() - lastNotified.getTime() < RESEND_INTERVAL_MS) continue;
 
-    const [tasksRes, homeworkRes, examsRes, eventsRes, habitsRes, completionsRes] = await Promise.all([
+    const [tasksRes, homeworkRes, subjectsRes, examsRes, eventsRes, habitsRes, completionsRes] = await Promise.all([
       supabase.from("tasks").select("*").eq("user_id", userId).eq("done", false).is("parent_task_id", null),
-      supabase.from("homework").select("*").eq("user_id", userId).eq("done", false),
+      supabase.from("homework").select("*").eq("user_id", userId).neq("status", "completed"),
+      supabase.from("subjects").select("*").eq("user_id", userId),
       supabase.from("exams").select("*").eq("user_id", userId),
       supabase.from("calendar_events").select("*").eq("user_id", userId),
       supabase.from("habits").select("*").eq("user_id", userId),
@@ -51,6 +52,7 @@ export async function GET(request: Request) {
     const snapshot: AppSnapshot = {
       tasks: (tasksRes.data as Task[]) ?? [],
       homework: (homeworkRes.data as Homework[]) ?? [],
+      subjects: (subjectsRes.data as Subject[]) ?? [],
       exams: (examsRes.data as Exam[]) ?? [],
       calendarEvents: (eventsRes.data as CalendarEventRow[]) ?? [],
       habits: (habitsRes.data as Habit[]) ?? [],

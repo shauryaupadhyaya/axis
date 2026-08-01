@@ -1,9 +1,10 @@
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import type { Exam } from "@/lib/types";
+import type { Exam, Subject } from "@/lib/types";
 import { daysUntil } from "@/lib/scores";
 
-export function ExamsWidget({ exams }: { exams: Exam[] }) {
+export function ExamsWidget({ exams, subjects }: { exams: Exam[]; subjects: Subject[] }) {
+  const subjectNameById = new Map(subjects.map((s) => [s.id, s.name]));
   return (
     <Card>
       <h3 className="text-h3 mb-3">Exams</h3>
@@ -16,10 +17,8 @@ export function ExamsWidget({ exams }: { exams: Exam[] }) {
             return (
               <li key={exam.id} className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-body font-medium">{exam.subject_name}</p>
-                  <p className="text-caption text-graphite">
-                    {exam.chapters_mastered}/{exam.chapters_total} chapters mastered
-                  </p>
+                  <p className="text-body font-medium">{subjectNameById.get(exam.subject_id) ?? "Subject"}</p>
+                  <p className="text-caption text-graphite">{exam.name}</p>
                 </div>
                 <Badge variant={days < 7 ? "danger" : "neutral"}>{days}d</Badge>
               </li>

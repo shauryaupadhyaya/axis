@@ -17,7 +17,7 @@ import {
   toISODate,
 } from "@/lib/scores";
 import { DEFAULT_STUDY_GOAL_MINUTES, DEFAULT_WATER_GOAL_ML } from "@/lib/constants";
-import type { Exam, Habit, HabitCompletion, StudySession, Task, WaterLog, Workout } from "@/lib/types";
+import type { Exam, Habit, HabitCompletion, StudySession, Subject, Task, WaterLog, Workout } from "@/lib/types";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -38,7 +38,7 @@ export default async function DashboardPage() {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
   sevenDaysAgo.setHours(0, 0, 0, 0);
 
-  const [tasksRes, habitsRes, completionsRes, examsRes, studyRes, waterRes, workoutRes] =
+  const [tasksRes, habitsRes, completionsRes, examsRes, subjectsRes, studyRes, waterRes, workoutRes] =
     await Promise.all([
       supabase
         .from("tasks")
@@ -51,6 +51,7 @@ export default async function DashboardPage() {
         .select("*")
         .gte("completed_at", toISODate(sixtyDaysAgo)),
       supabase.from("exams").select("*").gte("exam_date", today).order("exam_date").limit(2),
+      supabase.from("subjects").select("*"),
       supabase.from("study_sessions").select("*").gte("logged_at", sevenDaysAgo.toISOString()),
       supabase.from("water_logs").select("*").gte("logged_at", startOfToday.toISOString()),
       supabase.from("workouts").select("*").eq("scheduled_date", today).maybeSingle(),
@@ -60,6 +61,8 @@ export default async function DashboardPage() {
   const habits = (habitsRes.data ?? []) as Habit[];
   const completions = (completionsRes.data ?? []) as HabitCompletion[];
   const exams = (examsRes.data ?? []) as Exam[];
+  const subjects = (subjectsRes.data ?? []) as Subject[];
+  const subjectNameById = new Map(subjects.map((s) => [s.id, s.name]));
   const studySessions = (studyRes.data ?? []) as StudySession[];
   const waterLogs = (waterRes.data ?? []) as WaterLog[];
   const workout = (workoutRes.data ?? null) as Workout | null;
@@ -93,10 +96,11 @@ export default async function DashboardPage() {
     };
   } else if (nextExam) {
     const days = daysUntil(nextExam.exam_date);
+    const subjectName = subjectNameById.get(nextExam.subject_id) ?? "Subject";
     focus = {
-      headline: `${nextExam.subject_name} exam in ${days} day${days === 1 ? "" : "s"}`,
-      metadata: `${nextExam.chapters_mastered} of ${nextExam.chapters_total} chapters mastered, ${minutesToday}m logged today`,
-      ctaHref: "/study",
+      headline: `${subjectName} — ${nextExam.name} in ${days} day${days === 1 ? "" : "s"}`,
+      metadata: `${minutesToday}m logged today`,
+      ctaHref: `/study/${nextExam.subject_id}`,
       ctaLabel: "Begin",
     };
   }
@@ -114,7 +118,7 @@ export default async function DashboardPage() {
             <HabitsWidget habits={habits} completions={completions} />
           </WidgetSlot>
           <WidgetSlot span={1}>
-            <ExamsWidget exams={exams} />
+            <ExamsWidget exams={exams} subjects={subjects} />
           </WidgetSlot>
           <WidgetSlot span={1}>
             <StudyWidget sessions={studySessions} />

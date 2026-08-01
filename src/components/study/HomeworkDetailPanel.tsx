@@ -4,21 +4,24 @@ import { useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { SidePanel } from "@/components/ui/SidePanel";
 import { Input } from "@/components/ui/Input";
-import { Checkbox } from "@/components/ui/Checkbox";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { RichTextEditor } from "@/components/editor/RichTextEditor";
-import type { Homework, Priority } from "@/lib/types";
+import type { Chapter, Homework, HomeworkStatus, Priority } from "@/lib/types";
 import { deleteHomework, updateHomework } from "@/app/(app)/study/actions";
+import { homeworkStatusLabel } from "@/lib/study";
 
 const PRIORITIES: Priority[] = ["low", "medium", "high", "urgent"];
+const STATUSES: HomeworkStatus[] = ["not_started", "in_progress", "completed"];
 
 export function HomeworkDetailPanel({
   subjectId,
   homework,
+  chapters = [],
   onClose,
 }: {
   subjectId: string;
   homework: Homework | null;
+  chapters?: Chapter[];
   onClose: () => void;
 }) {
   const [, startTransition] = useTransition();
@@ -87,13 +90,44 @@ export function HomeworkDetailPanel({
           </div>
         </div>
 
-        <label className="flex items-center gap-2">
-          <Checkbox
-            checked={homework.done}
-            onChange={(e) => startTransition(() => updateHomework(subjectId, homework.id, { done: e.target.checked }))}
-          />
-          <span className="text-body">Done</span>
-        </label>
+        {chapters.length > 0 && (
+          <div>
+            <label className="text-label text-graphite mb-1.5 block">Chapter</label>
+            <select
+              value={homework.chapter_id ?? ""}
+              onChange={(e) =>
+                startTransition(() => updateHomework(subjectId, homework.id, { chapter_id: e.target.value || null }))
+              }
+              className="w-full text-small px-2 py-2 rounded-md border border-alabaster bg-linen dark:bg-bg-secondary"
+            >
+              <option value="">No chapter</option>
+              {chapters.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div>
+          <label className="text-label text-graphite mb-1.5 block">Status</label>
+          <div className="flex gap-1.5">
+            {STATUSES.map((s) => (
+              <button
+                key={s}
+                onClick={() => startTransition(() => updateHomework(subjectId, homework.id, { status: s }))}
+                className={`px-3 py-1.5 rounded-md text-small border transition-fast ${
+                  homework.status === s
+                    ? "bg-carbon text-white border-carbon dark:bg-tuscan dark:text-carbon dark:border-tuscan"
+                    : "border-alabaster hover:bg-bg"
+                }`}
+              >
+                {homeworkStatusLabel(s)}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </SidePanel>
   );

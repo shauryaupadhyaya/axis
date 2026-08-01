@@ -5,6 +5,7 @@ import type {
   HabitCompletion,
   Homework,
   StudySession,
+  Subject,
   Task,
   Workout,
 } from "@/lib/types";
@@ -37,6 +38,7 @@ interface BuildCalendarEventsInput {
   tasks: Task[];
   workouts: Workout[];
   exams: Exam[];
+  subjects?: Subject[];
   studySessions: StudySession[];
   habits: Habit[];
   habitCompletions: HabitCompletion[];
@@ -61,12 +63,14 @@ export function buildCalendarEvents({
   tasks,
   workouts,
   exams,
+  subjects = [],
   studySessions,
   habits,
   habitCompletions,
   homework = [],
   calendarEvents = [],
 }: BuildCalendarEventsInput): CalendarEvent[] {
+  const subjectNameById = new Map(subjects.map((s) => [s.id, s.name]));
   const events: CalendarEvent[] = [];
   const now = new Date();
 
@@ -131,7 +135,7 @@ export function buildCalendarEvents({
       id: `exam-${exam.id}`,
       type: "exam",
       refId: exam.id,
-      title: `${exam.subject_name} exam`,
+      title: `${subjectNameById.get(exam.subject_id) ?? "Exam"} — ${exam.name}`,
       date: new Date(exam.exam_date),
       colorClass: COLORS.exam.border,
       chipClass: COLORS.exam.chip,
