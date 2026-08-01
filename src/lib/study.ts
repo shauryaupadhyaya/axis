@@ -1,4 +1,4 @@
-import type { Chapter, ChapterStatus, Exam, Homework, HomeworkStatus, StudySession } from "@/lib/types";
+import type { Chapter, ChapterStatus, Exam, Homework, HomeworkStatus, Note, PomodoroSession, StudySession } from "@/lib/types";
 import { toISODate } from "@/lib/scores";
 
 export const CHAPTER_STATUS_ORDER: ChapterStatus[] = [
@@ -117,4 +117,104 @@ export function bucketHomework(homework: Homework[], now = new Date()): Homework
 
 export function homeworkStatusLabel(status: HomeworkStatus): string {
   return { not_started: "Not started", in_progress: "In progress", completed: "Completed" }[status];
+}
+
+// ============ Study streak + heatmap ============
+
+export interface StudyActivityInputs {
+  studySessions: StudySession[];
+  pomodoroSessions: PomodoroSession[];
+  notes: Note[];
+  homework: Homework[];
+}
+
+/** A day "counts" when a Pomodoro completed, a study session was logged, a note was updated, or homework was completed. */
+export function buildStudyActivityDates({ studySessions, pomodoroSessions, notes, homework }: StudyActivityInputs): Set<string> {
+  const dates = new Set<string>();
+  for (const s of studySessions) dates.add(s.logged_at.slice(0, 10));
+  for (const p of pomodoroSessions) {
+    if (p.completed && p.ended_at) dates.add(p.ended_at.slice(0, 10));
+  }
+  for (const n of notes) dates.add(n.updated_at.slice(0, 10));
+  for (const h of homework) {
+    if (h.completed_at) dates.add(h.completed_at.slice(0, 10));
+  }
+  return dates;
+}
+
+export interface StudyStreak {
+  current: number;
+  longest: number;
+  /** 0-100: fraction of days-so-far in the current calendar month with activity. */
+  monthProgress: number;
+}
+
+export function computeStudyStreak(activityDates: Set<string>, now = new Date()): StudyStreak {
+  // Current streak: consecutive days ending today or yesterday (today can still be "in progress").
+  let current = 0;
+  const cursor = new Date(now);
+  cursor.setHours(0, 0, 0, 0);
+  if (!activityDates.has(toISODate(cursor))) cursor.setDate(cursor.getDate() - 1);
+  while (activityDates.has(toISODate(cursor))) {
+    current += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  // Longest streak ever, from the full set of active dates.
+  const sorted = [...activityDates].sort();
+  let longest = 0;
+  let run = 0;
+  let prevTime: number | null = null;
+  for (const d of sorted) {
+    const t = new Date(d).getTime();
+    if (prevTime !== null && Math.round((t - prevTime) / 86400000) === 1) run += 1;
+    else run = 1;
+    longest = Math.max(longest, run);
+    prevTime = t;
+  }
+
+  const dayOfMonth = now.getDate();
+  let activeDaysThisMonth = 0;
+  for (let d = 1; d <= dayOfMonth; d++) {
+    const date = new Date(now.getFullYear(), now.getMonth(), d);
+    if (activityDates.has(toISODate(date))) activeDaysThisMonth += 1;
+  }
+  const monthProgress = Math.round((activeDaysThisMonth / dayOfMonth) * 100);
+
+  return { current, longest, monthProgress };
+}
+
+export interface HeatmapCell {
+  date: string;
+  minutes: number;
+  sessions: number;
+  intensity: 0 | 1 | 2 | 3 | 4;
+}
+
+function intensityFor(minutes: number): 0 | 1 | 2 | 3 | 4 {
+  if (minutes <= 0) return 0;
+  if (minutes < 20) return 1;
+  if (minutes < 45) return 2;
+  if (minutes < 90) return 3;
+  return 4;
+}
+
+/** GitHub-style heatmap cells for the trailing `days` window (7 for week, ~30 for month, ~365 for year). */
+export function buildStudyHeatmap(studySessions: StudySession[], days: number, now = new Date()): HeatmapCell[] {
+  const byDay = new Map<string, { minutes: number; sessions: number }>();
+  for (const s of studySessions) {
+    const day = s.logged_at.slice(0, 10);
+    const existing = byDay.get(day) ?? { minutes: 0, sessions: 0 };
+    existing.minutes += s.minutes;
+    existing.sessions += 1;
+    byDay.set(day, existing);
+  }
+
+  return Array.from({ length: days }, (_, i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - (days - 1 - i));
+    const date = toISODate(d);
+    const entry = byDay.get(date) ?? { minutes: 0, sessions: 0 };
+    return { date, minutes: entry.minutes, sessions: entry.sessions, intensity: intensityFor(entry.minutes) };
+  });
 }

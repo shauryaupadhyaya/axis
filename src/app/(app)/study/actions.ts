@@ -248,7 +248,11 @@ export async function updateHomework(
   }>
 ) {
   const { supabase, userId } = await requireUserId();
-  await supabase.from("homework").update(updates).eq("id", homeworkId).eq("user_id", userId);
+  const payload: typeof updates & { completed_at?: string | null } = { ...updates };
+  if (updates.status !== undefined) {
+    payload.completed_at = updates.status === "completed" ? new Date().toISOString() : null;
+  }
+  await supabase.from("homework").update(payload).eq("id", homeworkId).eq("user_id", userId);
   revalidatePath(`/study/${subjectId}`);
   revalidatePath("/study");
   revalidatePath("/calendar");

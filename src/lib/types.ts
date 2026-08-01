@@ -158,6 +158,7 @@ export interface Homework {
   priority: Priority;
   status: HomeworkStatus;
   created_at: string;
+  completed_at: string | null;
 }
 
 export interface StudySession {

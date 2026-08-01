@@ -6,7 +6,8 @@ import { Plus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { SubjectCreateModal } from "./SubjectCreateModal";
-import type { Chapter, Exam, Homework, Subject } from "@/lib/types";
+import { StudyDashboard } from "./StudyDashboard";
+import type { Chapter, Exam, Homework, Note, PomodoroSession, StudySession, Subject } from "@/lib/types";
 import { daysUntil } from "@/lib/scores";
 import { chaptersCompletionPercent, computeSubjectReadiness } from "@/lib/study";
 
@@ -15,11 +16,17 @@ export function SubjectsList({
   exams,
   chapters,
   homework,
+  studySessions = [],
+  pomodoroSessions = [],
+  notes = [],
 }: {
   subjects: Subject[];
   exams: Exam[];
   chapters: Chapter[];
   homework: Homework[];
+  studySessions?: StudySession[];
+  pomodoroSessions?: PomodoroSession[];
+  notes?: Note[];
 }) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
@@ -32,6 +39,14 @@ export function SubjectsList({
           <Plus size={16} /> Add subject
         </Button>
       </div>
+
+      <StudyDashboard
+        subjects={subjects}
+        studySessions={studySessions}
+        pomodoroSessions={pomodoroSessions}
+        notes={notes}
+        homework={homework}
+      />
 
       {subjects.length === 0 ? (
         <p className="text-small text-graphite py-8 text-center">No subjects yet — add one to get started.</p>
