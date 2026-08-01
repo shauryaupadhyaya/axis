@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Copy, Minus, Pencil, Plus, SkipForward, Trash2, Trophy, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ExerciseLibraryModal } from "@/components/health/gym/ExerciseLibraryModal";
-import type { Workout, WorkoutExercise, WorkoutSet } from "@/lib/types";
+import { useExerciseFavorites } from "@/hooks/useExerciseFavorites";
+import type { ExerciseFavorite, Workout, WorkoutExercise, WorkoutSet } from "@/lib/types";
 import type { Exercise } from "@/lib/gym/exercise-library";
 import { totalVolume } from "@/lib/gym";
 import {
@@ -37,12 +40,14 @@ export function WorkoutSession({
   sets,
   allSets,
   allExercises,
+  favorites,
 }: {
   workout: Workout;
   exercises: WorkoutExercise[];
   sets: WorkoutSet[];
   allSets: WorkoutSet[];
   allExercises: WorkoutExercise[];
+  favorites: ExerciseFavorite[];
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -50,12 +55,14 @@ export function WorkoutSession({
   const startRef = useRef<number>(0);
   const [restRemaining, setRestRemaining] = useState<number | null>(null);
   const [draft, setDraft] = useState<Record<string, { weight: number; reps: number }>>({});
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [favoriteIds] = useState<Set<string>>(new Set());
+  const [pickerOpen, setPickerOpen] = useState(() => exercises.length === 0);
+  const { favoriteIds, toggleFavorite } = useExerciseFavorites(favorites);
   const [editingSet, setEditingSet] = useState<{ id: string; weight: number; reps: number } | null>(null);
   const [confirmDeleteSet, setConfirmDeleteSet] = useState<string | null>(null);
   const [confirmRemoveExercise, setConfirmRemoveExercise] = useState<string | null>(null);
   const [confirmDeleteWorkout, setConfirmDeleteWorkout] = useState(false);
+  const [finishModalOpen, setFinishModalOpen] = useState(false);
+  const [finishName, setFinishName] = useState("");
 
   const orderedExercises = [...exercises].sort((a, b) => a.position - b.position);
 
@@ -136,7 +143,7 @@ export function WorkoutSession({
         <button onClick={() => router.push("/health")} aria-label="Back">
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-h2 flex-1">{workout.name}</h1>
+        <h1 className="text-h2 flex-1">{workout.name || "New Workout"}</h1>
         <span className="text-mono text-display">{formatElapsed(elapsed)}</span>
         <button
           onClick={() => setConfirmDeleteWorkout(true)}
@@ -310,7 +317,7 @@ export function WorkoutSession({
         <div className="flex items-center justify-between">
           <span className="text-mono text-graphite">Volume: {volume}kg</span>
           {workout.status !== "completed" && (
-            <Button onClick={() => startTransition(() => finishWorkout(workout.id))} className="flex items-center gap-2">
+            <Button onClick={() => setFinishModalOpen(true)} className="flex items-center gap-2">
               <SkipForward size={14} /> Finish workout
             </Button>
           )}
@@ -318,8 +325,43 @@ export function WorkoutSession({
       </div>
 
       {pickerOpen && (
-        <ExerciseLibraryModal favoriteIds={favoriteIds} onClose={() => setPickerOpen(false)} onSelect={handleSelectExercise} />
+        <ExerciseLibraryModal
+          favoriteIds={favoriteIds}
+          onToggleFavorite={toggleFavorite}
+          onClose={() => setPickerOpen(false)}
+          onSelect={handleSelectExercise}
+        />
       )}
+
+      <Modal
+        open={finishModalOpen}
+        onClose={() => setFinishModalOpen(false)}
+        title="Finish workout"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setFinishModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                startTransition(() => finishWorkout(workout.id, finishName));
+                setFinishModalOpen(false);
+              }}
+            >
+              Finish
+            </Button>
+          </>
+        }
+      >
+        <Input
+          autoFocus
+          label="Workout name"
+          placeholder="e.g. Push Day (optional)"
+          value={finishName}
+          onChange={(e) => setFinishName(e.target.value)}
+        />
+        <p className="text-caption text-graphite mt-2">Leave blank to auto-name it based on the time of day.</p>
+      </Modal>
 
       <ConfirmDialog
         open={confirmDeleteSet !== null}

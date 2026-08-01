@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import { Home, Search, Star, X } from "lucide-react";
 import { BodyMap } from "./BodyMap";
 import { ExerciseDetailModal } from "./ExerciseDetailModal";
@@ -13,7 +13,6 @@ import {
   type ExerciseDifficulty,
   type MuscleGroup,
 } from "@/lib/gym/exercise-library";
-import { toggleExerciseFavorite } from "@/app/(app)/health/actions";
 
 const EQUIPMENT_OPTIONS: Equipment[] = [
   "barbell",
@@ -33,14 +32,15 @@ const CATEGORY_OPTIONS = Object.keys(CATEGORY_LABELS) as ExerciseCategory[];
 
 export function ExerciseLibraryModal({
   favoriteIds,
+  onToggleFavorite,
   onClose,
   onSelect,
 }: {
   favoriteIds: Set<string>;
+  onToggleFavorite: (exerciseId: string, next: boolean) => void;
   onClose: () => void;
   onSelect: (exercise: Exercise) => void;
 }) {
-  const [, startTransition] = useTransition();
   const [query, setQuery] = useState("");
   const [muscle, setMuscle] = useState<MuscleGroup | null>(null);
   const [equipment, setEquipment] = useState<Equipment | "">("");
@@ -153,7 +153,7 @@ export function ExerciseLibraryModal({
                       aria-label={isFav ? "Unfavorite" : "Favorite"}
                       onClick={(e) => {
                         e.stopPropagation();
-                        startTransition(() => toggleExerciseFavorite(ex.id, !isFav));
+                        onToggleFavorite(ex.id, !isFav);
                       }}
                     >
                       <Star size={16} className={isFav ? "fill-tuscan text-tuscan" : "text-graphite"} />
@@ -170,6 +170,7 @@ export function ExerciseLibraryModal({
         <ExerciseDetailModal
           exercise={detailExercise}
           isFavorite={favoriteIds.has(detailExercise.id)}
+          onToggleFavorite={onToggleFavorite}
           onClose={() => setDetailExercise(null)}
           onSelect={(ex) => {
             onSelect(ex);

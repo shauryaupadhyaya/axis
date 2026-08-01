@@ -70,3 +70,13 @@ export function computeMuscleRecovery(
 export function totalVolume(sets: WorkoutSet[]): number {
   return sets.filter((s) => s.completed).reduce((sum, s) => sum + s.weight * s.reps, 0);
 }
+
+/** Auto-generated name for a finished workout left unnamed, based on time of day. */
+export function generateWorkoutName(date = new Date()): string {
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 12) return "Morning Workout";
+  if (hour >= 12 && hour < 14) return "Lunch Workout";
+  if (hour >= 14 && hour < 18) return "Afternoon Workout";
+  if (hour >= 18 && hour < 21) return "Evening Workout";
+  return "Night Workout";
+}

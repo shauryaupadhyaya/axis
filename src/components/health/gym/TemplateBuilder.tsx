@@ -25,10 +25,12 @@ export function TemplateBuilder({
   templates,
   templateExercises,
   favoriteIds,
+  onToggleFavorite,
 }: {
   templates: WorkoutTemplate[];
   templateExercises: WorkoutTemplateExercise[];
   favoriteIds: Set<string>;
+  onToggleFavorite: (exerciseId: string, next: boolean) => void;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -155,7 +157,12 @@ export function TemplateBuilder({
       )}
 
       {pickerFor && (
-        <ExerciseLibraryModal favoriteIds={favoriteIds} onClose={() => setPickerFor(null)} onSelect={(ex) => handleSelectExercise(pickerFor, ex)} />
+        <ExerciseLibraryModal
+          favoriteIds={favoriteIds}
+          onToggleFavorite={onToggleFavorite}
+          onClose={() => setPickerFor(null)}
+          onSelect={(ex) => handleSelectExercise(pickerFor, ex)}
+        />
       )}
 
       <ConfirmDialog

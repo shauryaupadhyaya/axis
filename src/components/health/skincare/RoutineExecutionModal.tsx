@@ -33,6 +33,18 @@ export function RoutineExecutionModal({
     setRunning(true);
   }
 
+  // Lock background scrolling while this fullscreen popup is open. Without
+  // this, the page behind a `position: fixed` overlay can keep scrolling —
+  // on mobile browsers in particular that desyncs the fixed layer from the
+  // viewport mid-scroll and reads as the popup "shaking"/glitching.
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   useEffect(() => {
     if (!running || done) return;
     if (remaining <= 0) {
@@ -56,8 +68,8 @@ export function RoutineExecutionModal({
   const progress = steps.length > 0 ? ((index + (done ? 1 : 0)) / steps.length) * 100 : 0;
 
   return (
-    <div className="fixed inset-0 z-[1200] bg-black/60 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-2xl bg-linen dark:bg-bg-secondary border border-alabaster p-6 animate-pop-in">
+    <div className="fixed inset-0 z-[1200] bg-black/60 flex items-center justify-center p-4 overscroll-contain">
+      <div className="w-full max-w-sm max-h-[92vh] overflow-y-auto rounded-2xl bg-linen dark:bg-bg-secondary border border-alabaster p-6 animate-pop-in">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-h3">{title}</h3>
           <button onClick={onClose} aria-label="Close">

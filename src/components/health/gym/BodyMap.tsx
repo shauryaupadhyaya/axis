@@ -6,43 +6,75 @@ import type { MuscleGroup } from "@/lib/gym/exercise-library";
 interface Region {
   muscle: MuscleGroup;
   view: "front" | "back";
-  d: string;
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  rotate?: number;
 }
 
-// Simplified anatomical regions on a shared 100x220 silhouette viewBox.
-const REGIONS: Region[] = [
-  { muscle: "Neck", view: "front", d: "M45 18 L55 18 L54 26 L46 26 Z" },
-  { muscle: "Front Delts", view: "front", d: "M28 30 L40 28 L38 42 L26 42 Z" },
-  { muscle: "Front Delts", view: "front", d: "M60 28 L72 30 L74 42 L62 42 Z" },
-  { muscle: "Chest", view: "front", d: "M38 30 L62 30 L60 52 L40 52 Z" },
-  { muscle: "Biceps", view: "front", d: "M24 44 L36 44 L34 62 L23 60 Z" },
-  { muscle: "Biceps", view: "front", d: "M64 44 L76 44 L77 60 L66 62 Z" },
-  { muscle: "Forearms", view: "front", d: "M20 62 L32 60 L30 80 L19 78 Z" },
-  { muscle: "Forearms", view: "front", d: "M68 60 L80 62 L81 78 L70 80 Z" },
-  { muscle: "Abs", view: "front", d: "M40 54 L60 54 L58 82 L42 82 Z" },
-  { muscle: "Obliques", view: "front", d: "M34 54 L40 54 L40 82 L36 82 Z" },
-  { muscle: "Obliques", view: "front", d: "M60 54 L66 54 L64 82 L60 82 Z" },
-  { muscle: "Hip Flexors", view: "front", d: "M40 84 L60 84 L58 96 L42 96 Z" },
-  { muscle: "Quads", view: "front", d: "M36 98 L50 98 L48 148 L35 148 Z" },
-  { muscle: "Quads", view: "front", d: "M50 98 L64 98 L65 148 L52 148 Z" },
-  { muscle: "Calves", view: "front", d: "M36 150 L48 150 L47 190 L37 190 Z" },
-  { muscle: "Calves", view: "front", d: "M52 150 L64 150 L63 190 L53 190 Z" },
+// A smooth, rounded silhouette (all ellipses, no blocky rectangles) shared by
+// both views — head/neck/torso/hips/limbs — drawn once beneath the
+// interactive muscle regions so the figure reads as an actual body rather
+// than floating shapes.
+const SILHOUETTE = [
+  { cx: 60, cy: 16, rx: 11, ry: 13 }, // head
+  { cx: 60, cy: 30, rx: 7, ry: 6 }, // neck
+  { cx: 60, cy: 52, rx: 26, ry: 20 }, // shoulders/upper torso
+  { cx: 60, cy: 90, rx: 18, ry: 24 }, // waist
+  { cx: 60, cy: 118, rx: 20, ry: 14 }, // hips
+  { cx: 30, cy: 60, rx: 8, ry: 20, rotate: -8 }, // left upper arm
+  { cx: 24, cy: 98, rx: 6.5, ry: 18, rotate: -4 }, // left forearm
+  { cx: 90, cy: 60, rx: 8, ry: 20, rotate: 8 }, // right upper arm
+  { cx: 96, cy: 98, rx: 6.5, ry: 18, rotate: 4 }, // right forearm
+  { cx: 48, cy: 160, rx: 12, ry: 32 }, // left thigh
+  { cx: 72, cy: 160, rx: 12, ry: 32 }, // right thigh
+  { cx: 47, cy: 220, rx: 8, ry: 26 }, // left calf
+  { cx: 73, cy: 220, rx: 8, ry: 26 }, // right calf
+  { cx: 47, cy: 250, rx: 8, ry: 5, rotate: -6 }, // left foot
+  { cx: 73, cy: 250, rx: 8, ry: 5, rotate: 6 }, // right foot
+];
 
-  { muscle: "Neck", view: "back", d: "M45 18 L55 18 L54 26 L46 26 Z" },
-  { muscle: "Traps", view: "back", d: "M38 24 L62 24 L58 36 L42 36 Z" },
-  { muscle: "Rear Delts", view: "back", d: "M28 30 L40 28 L38 42 L26 42 Z" },
-  { muscle: "Rear Delts", view: "back", d: "M60 28 L72 30 L74 42 L62 42 Z" },
-  { muscle: "Back", view: "back", d: "M38 36 L62 36 L60 60 L40 60 Z" },
-  { muscle: "Lats", view: "back", d: "M32 44 L40 42 L40 66 L34 66 Z" },
-  { muscle: "Lats", view: "back", d: "M60 42 L68 44 L66 66 L60 66 Z" },
-  { muscle: "Triceps", view: "back", d: "M24 44 L36 44 L34 62 L23 60 Z" },
-  { muscle: "Triceps", view: "back", d: "M64 44 L76 44 L77 60 L66 62 Z" },
-  { muscle: "Lower Back", view: "back", d: "M40 62 L60 62 L58 82 L42 82 Z" },
-  { muscle: "Glutes", view: "back", d: "M36 84 L64 84 L62 100 L38 100 Z" },
-  { muscle: "Hamstrings", view: "back", d: "M36 102 L50 102 L48 148 L35 148 Z" },
-  { muscle: "Hamstrings", view: "back", d: "M50 102 L64 102 L65 148 L52 148 Z" },
-  { muscle: "Calves", view: "back", d: "M36 150 L48 150 L47 190 L37 190 Z" },
-  { muscle: "Calves", view: "back", d: "M52 150 L64 150 L63 190 L53 190 Z" },
+// Interactive muscle regions layered on top of the silhouette. Ellipses only
+// (native smooth curves) — no straight-edge polygons.
+const REGIONS: Region[] = [
+  { muscle: "Neck", view: "front", cx: 60, cy: 28, rx: 6, ry: 5 },
+  { muscle: "Front Delts", view: "front", cx: 38, cy: 46, rx: 7, ry: 8 },
+  { muscle: "Front Delts", view: "front", cx: 82, cy: 46, rx: 7, ry: 8 },
+  { muscle: "Chest", view: "front", cx: 48, cy: 54, rx: 11, ry: 10 },
+  { muscle: "Chest", view: "front", cx: 72, cy: 54, rx: 11, ry: 10 },
+  { muscle: "Biceps", view: "front", cx: 30, cy: 62, rx: 6, ry: 14, rotate: -8 },
+  { muscle: "Biceps", view: "front", cx: 90, cy: 62, rx: 6, ry: 14, rotate: 8 },
+  { muscle: "Forearms", view: "front", cx: 24, cy: 98, rx: 5, ry: 15, rotate: -4 },
+  { muscle: "Forearms", view: "front", cx: 96, cy: 98, rx: 5, ry: 15, rotate: 4 },
+  { muscle: "Abs", view: "front", cx: 60, cy: 88, rx: 11, ry: 22 },
+  { muscle: "Obliques", view: "front", cx: 44, cy: 90, rx: 5, ry: 18 },
+  { muscle: "Obliques", view: "front", cx: 76, cy: 90, rx: 5, ry: 18 },
+  { muscle: "Hip Flexors", view: "front", cx: 60, cy: 116, rx: 14, ry: 8 },
+  { muscle: "Quads", view: "front", cx: 48, cy: 158, rx: 10, ry: 30 },
+  { muscle: "Quads", view: "front", cx: 72, cy: 158, rx: 10, ry: 30 },
+  { muscle: "Calves", view: "front", cx: 47, cy: 220, rx: 7, ry: 24 },
+  { muscle: "Calves", view: "front", cx: 73, cy: 220, rx: 7, ry: 24 },
+
+  { muscle: "Neck", view: "back", cx: 60, cy: 28, rx: 6, ry: 5 },
+  { muscle: "Traps", view: "back", cx: 60, cy: 42, rx: 16, ry: 10 },
+  { muscle: "Rear Delts", view: "back", cx: 38, cy: 46, rx: 7, ry: 8 },
+  { muscle: "Rear Delts", view: "back", cx: 82, cy: 46, rx: 7, ry: 8 },
+  { muscle: "Back", view: "back", cx: 60, cy: 62, rx: 15, ry: 14 },
+  { muscle: "Lats", view: "back", cx: 42, cy: 68, rx: 8, ry: 16 },
+  { muscle: "Lats", view: "back", cx: 78, cy: 68, rx: 8, ry: 16 },
+  { muscle: "Rhomboids", view: "back", cx: 60, cy: 52, rx: 8, ry: 6 },
+  { muscle: "Triceps", view: "back", cx: 30, cy: 62, rx: 6, ry: 14, rotate: -8 },
+  { muscle: "Triceps", view: "back", cx: 90, cy: 62, rx: 6, ry: 14, rotate: 8 },
+  { muscle: "Forearms", view: "back", cx: 24, cy: 98, rx: 5, ry: 15, rotate: -4 },
+  { muscle: "Forearms", view: "back", cx: 96, cy: 98, rx: 5, ry: 15, rotate: 4 },
+  { muscle: "Lower Back", view: "back", cx: 60, cy: 98, rx: 12, ry: 14 },
+  { muscle: "Glutes", view: "back", cx: 48, cy: 124, rx: 11, ry: 10 },
+  { muscle: "Glutes", view: "back", cx: 72, cy: 124, rx: 11, ry: 10 },
+  { muscle: "Hamstrings", view: "back", cx: 48, cy: 160, rx: 10, ry: 30 },
+  { muscle: "Hamstrings", view: "back", cx: 72, cy: 160, rx: 10, ry: 30 },
+  { muscle: "Calves", view: "back", cx: 47, cy: 220, rx: 7, ry: 24 },
+  { muscle: "Calves", view: "back", cx: 73, cy: 220, rx: 7, ry: 24 },
 ];
 
 export function BodyMap({
@@ -71,24 +103,40 @@ export function BodyMap({
           </button>
         ))}
       </div>
-      <svg viewBox="0 0 100 200" width={160} height={320}>
-        <ellipse cx="50" cy="12" rx="9" ry="10" fill="var(--alabaster-grey)" opacity={0.5} />
+      <svg viewBox="0 0 120 262" width={160} height={340}>
+        <g fill="var(--alabaster-grey)" opacity={0.35}>
+          {SILHOUETTE.map((s, i) => (
+            <ellipse
+              key={i}
+              cx={s.cx}
+              cy={s.cy}
+              rx={s.rx}
+              ry={s.ry}
+              transform={s.rotate ? `rotate(${s.rotate} ${s.cx} ${s.cy})` : undefined}
+            />
+          ))}
+        </g>
         {REGIONS.filter((r) => r.view === view).map((r, i) => {
           const custom = colorByMuscle?.[r.muscle];
           const isSelected = selected === r.muscle;
           return (
-            <path
+            <ellipse
               key={`${r.muscle}-${i}`}
-              d={r.d}
+              cx={r.cx}
+              cy={r.cy}
+              rx={r.rx}
+              ry={r.ry}
+              transform={r.rotate ? `rotate(${r.rotate} ${r.cx} ${r.cy})` : undefined}
               fill={custom ?? (isSelected ? "var(--tuscan-sun)" : "var(--alabaster-grey)")}
-              fillOpacity={custom ? 0.85 : isSelected ? 0.9 : 0.45}
+              fillOpacity={custom ? 0.88 : isSelected ? 0.9 : 0.55}
               stroke="var(--bg)"
-              strokeWidth={0.6}
-              className="cursor-pointer transition-fast hover:fill-opacity-80"
+              strokeWidth={0.5}
+              className="cursor-pointer hover:fill-opacity-80"
+              style={{ transition: "fill 400ms ease, fill-opacity 200ms ease" }}
               onClick={() => onSelectMuscle?.(r.muscle)}
             >
               <title>{r.muscle}</title>
-            </path>
+            </ellipse>
           );
         })}
       </svg>

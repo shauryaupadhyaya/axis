@@ -63,6 +63,10 @@ export function WaterGlass({ percent, pulseKey, size = 220 }: WaterGlassProps) {
   }
 
   const waveY = 100 - clamped;
+  // Single source of truth for the glass outline — reused for the fill, the
+  // clip path, and the re-stroked rim, so all three can never drift out of
+  // sync with each other.
+  const glassPath = "M 22 8 L 78 8 L 72 92 Q 50 98 28 92 Z";
 
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
@@ -81,7 +85,7 @@ export function WaterGlass({ percent, pulseKey, size = 220 }: WaterGlassProps) {
       >
         <defs>
           <clipPath id="glass-clip">
-            <path d="M 22 8 L 78 8 L 72 92 Q 50 98 28 92 Z" />
+            <path d={glassPath} />
           </clipPath>
           <linearGradient id="water-fill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#60a5fa" />
@@ -94,8 +98,8 @@ export function WaterGlass({ percent, pulseKey, size = 220 }: WaterGlassProps) {
           </linearGradient>
         </defs>
 
-        {/* Glass body: soft sheen fill + refraction-style double stroke for a "glass material" feel */}
-        <path d="M 22 8 L 78 8 L 72 92 Q 50 98 28 92 Z" fill="url(#glass-sheen)" stroke="var(--border)" strokeWidth="1.5" />
+        {/* Glass body: soft sheen fill for a "glass material" feel */}
+        <path d={glassPath} fill="url(#glass-sheen)" />
 
         <g clipPath="url(#glass-clip)" className="animate-water-bob" style={{ transformBox: "fill-box", transformOrigin: "center" }}>
           <rect
@@ -121,9 +125,21 @@ export function WaterGlass({ percent, pulseKey, size = 220 }: WaterGlassProps) {
           />
         </g>
 
-        <path d="M 22 8 L 78 8 L 72 92 Q 50 98 28 92 Z" fill="none" stroke="var(--border)" strokeWidth="1.5" />
-        {/* highlight streak for a premium reflective look */}
-        <path d="M 27 11 L 31 11 L 26 86" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" />
+        {/* Rim re-stroked on top so the water fill never visually spills over the border */}
+        <path d={glassPath} fill="none" stroke="var(--border)" strokeWidth="1.5" strokeLinejoin="round" />
+
+        {/* Soft reflection highlight — a filled, rounded sliver safely inside the
+            rim (not a stray stroked line touching the edge). */}
+        <rect
+          x="26.5"
+          y="12"
+          width="2.6"
+          height="66"
+          rx="1.3"
+          fill="rgba(255,255,255,0.4)"
+          transform="rotate(-2 27.8 45)"
+          pointerEvents="none"
+        />
 
         {ripples.map((r) => (
           <circle

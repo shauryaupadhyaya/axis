@@ -2,17 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Clock, Plus, Trash2, X } from "lucide-react";
+import { Check, Clock, Play, Trash2, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { DatePicker } from "@/components/ui/DatePicker";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TemplateBuilder } from "@/components/health/gym/TemplateBuilder";
 import { GymInsights } from "@/components/health/gym/GymInsights";
+import { useExerciseFavorites } from "@/hooks/useExerciseFavorites";
 import type { ExerciseFavorite, Workout, WorkoutExercise, WorkoutSet, WorkoutTemplate, WorkoutTemplateExercise } from "@/lib/types";
-import { createWorkout, deleteWorkout } from "@/app/(app)/health/actions";
-import { toISODate } from "@/lib/scores";
+import { deleteWorkout, startWorkout } from "@/app/(app)/health/actions";
 import { totalVolume } from "@/lib/gym";
 
 const HISTORY_PAGE_SIZE = 8;
@@ -35,23 +33,17 @@ export function WorkoutsTab({
   favorites = [],
 }: WorkoutsTabProps) {
   const router = useRouter();
-  const [adding, setAdding] = useState(false);
-  const [name, setName] = useState("");
-  const [date, setDate] = useState<string | null>(toISODate(new Date()));
   const [, startTransition] = useTransition();
+  const [starting, setStarting] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [confirmDeleteWorkout, setConfirmDeleteWorkout] = useState<string | null>(null);
-  const favoriteIds = new Set(favorites.map((f) => f.exercise_id));
+  const { favoriteIds, toggleFavorite } = useExerciseFavorites(favorites);
 
-  function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim() || !date) return;
-    startTransition(async () => {
-      const id = await createWorkout(name, date);
-      if (id) router.push(`/health/workouts/${id}`);
-    });
-    setName("");
-    setAdding(false);
+  async function handleStartWorkout() {
+    setStarting(true);
+    const id = await startWorkout();
+    if (id) router.push(`/health/workouts/${id}`);
+    else setStarting(false);
   }
 
   return (
@@ -61,20 +53,10 @@ export function WorkoutsTab({
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-h2">Workout history</h2>
-              <Button onClick={() => setAdding((v) => !v)} className="flex items-center gap-1.5">
-                <Plus size={16} /> New workout
+              <Button onClick={handleStartWorkout} disabled={starting} className="flex items-center gap-1.5">
+                <Play size={16} /> Start workout
               </Button>
             </div>
-
-            {adding && (
-              <Card className="mb-4 max-w-sm">
-                <form onSubmit={handleAdd} className="flex flex-col gap-3">
-                  <Input autoFocus label="Workout name" value={name} onChange={(e) => setName(e.target.value)} />
-                  <DatePicker label="Date" value={date} onChange={setDate} />
-                  <Button type="submit">Create</Button>
-                </form>
-              </Card>
-            )}
 
             {workouts.length === 0 ? (
               <p className="text-small text-graphite py-8 text-center">No workouts scheduled yet.</p>
@@ -95,7 +77,7 @@ export function WorkoutsTab({
                       <Card key={workout.id} className="group cursor-pointer" onClick={() => router.push(`/health/workouts/${workout.id}`)}>
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <h3 className="text-h3">{workout.name}</h3>
+                            <h3 className="text-h3">{workout.name || "In-progress workout"}</h3>
                             <p className="text-caption text-graphite">
                               {new Date(workout.scheduled_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} ·{" "}
                               {muscleGroups.join(", ") || "No exercises yet"} · {workoutExercises.length} exercises
@@ -134,7 +116,12 @@ export function WorkoutsTab({
           </div>
         </div>
 
-        <TemplateBuilder templates={templates} templateExercises={templateExercises} favoriteIds={favoriteIds} />
+        <TemplateBuilder
+          templates={templates}
+          templateExercises={templateExercises}
+          favoriteIds={favoriteIds}
+          onToggleFavorite={toggleFavorite}
+        />
       </div>
 
       <GymInsights workouts={workouts} exercises={exercises} sets={sets} />

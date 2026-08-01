@@ -1,10 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
 import { Dumbbell, Plus, Star, X } from "lucide-react";
 import { BodyMap } from "./BodyMap";
 import { CATEGORY_LABELS, exerciseImageUrl, type Exercise, type MuscleGroup } from "@/lib/gym/exercise-library";
-import { toggleExerciseFavorite } from "@/app/(app)/health/actions";
 
 // Regions BodyMap doesn't draw as their own shape yet — fall back to the
 // nearest region it does draw so the highlight still shows up.
@@ -29,15 +27,16 @@ function buildActivationMap(exercise: Exercise): Partial<Record<MuscleGroup, str
 export function ExerciseDetailModal({
   exercise,
   isFavorite,
+  onToggleFavorite,
   onClose,
   onSelect,
 }: {
   exercise: Exercise;
   isFavorite: boolean;
+  onToggleFavorite: (exerciseId: string, next: boolean) => void;
   onClose: () => void;
   onSelect?: (exercise: Exercise) => void;
 }) {
-  const [, startTransition] = useTransition();
   const activation = buildActivationMap(exercise);
 
   return (
@@ -53,7 +52,7 @@ export function ExerciseDetailModal({
           <div className="flex items-center gap-3">
             <button
               aria-label={isFavorite ? "Unfavorite" : "Favorite"}
-              onClick={() => startTransition(() => toggleExerciseFavorite(exercise.id, !isFavorite))}
+              onClick={() => onToggleFavorite(exercise.id, !isFavorite)}
             >
               <Star size={18} className={isFavorite ? "fill-tuscan text-tuscan" : "text-graphite"} />
             </button>

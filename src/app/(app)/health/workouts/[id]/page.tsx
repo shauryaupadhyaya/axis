@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { WorkoutSession } from "@/components/health/WorkoutSession";
-import type { Workout, WorkoutExercise, WorkoutSet } from "@/lib/types";
+import type { ExerciseFavorite, Workout, WorkoutExercise, WorkoutSet } from "@/lib/types";
 
 export default async function WorkoutSessionPage({
   params,
@@ -11,10 +11,11 @@ export default async function WorkoutSessionPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [workoutRes, exercisesRes, setsRes] = await Promise.all([
+  const [workoutRes, exercisesRes, setsRes, favoritesRes] = await Promise.all([
     supabase.from("workouts").select("*").eq("id", id).single(),
     supabase.from("workout_exercises").select("*").eq("workout_id", id).order("position"),
     supabase.from("workout_sets").select("*"),
+    supabase.from("exercise_favorites").select("*"),
   ]);
 
   if (!workoutRes.data) notFound();
@@ -34,6 +35,7 @@ export default async function WorkoutSessionPage({
       sets={sets}
       allSets={allSets}
       allExercises={(allExercisesRes.data as WorkoutExercise[]) ?? exercises}
+      favorites={(favoritesRes.data as ExerciseFavorite[]) ?? []}
     />
   );
 }

@@ -3,16 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { requireUserId } from "@/lib/supabase/require-user";
 import { toISODate } from "@/lib/scores";
+import { generateWorkoutName } from "@/lib/gym";
 import type { SkincarePeriod, SkincareStepType, WorkoutStatus } from "@/lib/types";
 
 // Workouts
-export async function createWorkout(name: string, scheduledDate: string) {
+/** Instantly creates + starts a workout session — no name required upfront (named on finish instead). */
+export async function startWorkout() {
   const { supabase, userId } = await requireUserId();
-  const trimmed = name.trim();
-  if (!trimmed) return null;
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("workouts")
-    .insert({ user_id: userId, name: trimmed, scheduled_date: scheduledDate })
+    .insert({ user_id: userId, name: "", scheduled_date: toISODate(new Date()), started_at: now })
     .select("id")
     .single();
   revalidatePath("/health");
@@ -130,14 +131,16 @@ export async function startWorkoutTimer(workoutId: string) {
     .is("started_at", null);
 }
 
-export async function finishWorkout(workoutId: string) {
+export async function finishWorkout(workoutId: string, name?: string) {
   const { supabase, userId } = await requireUserId();
+  const trimmed = name?.trim();
   await supabase
     .from("workouts")
-    .update({ status: "completed", ended_at: new Date().toISOString() })
+    .update({ status: "completed", ended_at: new Date().toISOString(), name: trimmed || generateWorkoutName() })
     .eq("id", workoutId)
     .eq("user_id", userId);
   revalidatePath("/health");
+  revalidatePath(`/health/workouts/${workoutId}`);
 }
 
 // Templates
