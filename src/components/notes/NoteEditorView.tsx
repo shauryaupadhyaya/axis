@@ -4,9 +4,10 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Star, Trash2 } from "lucide-react";
 import { RichTextEditor } from "@/components/editor/RichTextEditor";
-import { Button } from "@/components/ui/Button";
+import { NoteOutline } from "./NoteOutline";
 import type { Note, NoteFolder } from "@/lib/types";
 import { deleteNote, updateNote } from "@/app/(app)/notes/actions";
+import { uploadInlineImage } from "@/lib/attachments";
 
 const AUTOSAVE_DELAY = 3000;
 
@@ -25,6 +26,7 @@ export function NoteEditorView({
   const [tagInput, setTagInput] = useState("");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestRef = useRef({ title: note.title, content: note.content, folderId: note.folder_id });
+  const editorContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     latestRef.current = { title, content, folderId };
@@ -114,75 +116,85 @@ export function NoteEditorView({
       </header>
 
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-3xl mx-auto flex flex-col gap-5">
-          {/* Plain input for title — avoids Input component's hardcoded styling */}
-          <input
-            value={title}
-            onChange={(e) => handleTitleChange(e.target.value)}
-            placeholder="Untitled"
-            className="text-h1 font-bold border-none px-0 py-0 bg-transparent focus:outline-none w-full placeholder:text-graphite placeholder:opacity-30"
-          />
-
-          <div>
-            <label className="text-label text-graphite mb-1.5 block">Folder</label>
-            <select
-              value={folderId ?? ""}
-              onChange={(e) => handleFolderChange(e.target.value || null)}
-              className="text-small border border-alabaster rounded-md px-2 py-1.5 bg-linen dark:bg-bg-secondary w-full"
-            >
-              <option value="">No folder</option>
-              {folders.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-label text-graphite mb-1.5 block">Tags</label>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {note.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-alabaster text-graphite text-caption"
-                >
-                  {tag}
-                  <button onClick={() => removeTag(tag)} aria-label={`Remove ${tag}`}>
-                    <span className="text-[10px]">&times;</span>
-                  </button>
-                </span>
-              ))}
-            </div>
+        <div className="max-w-5xl mx-auto flex gap-8">
+          <div className="max-w-3xl flex-1 flex flex-col gap-5 min-w-0">
+            {/* Plain input for title — avoids Input component's hardcoded styling */}
             <input
-              placeholder="Add tag, press Enter"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addTag(tagInput);
-                }
-              }}
-              className="text-body px-3 py-2 rounded-lg border border-alabaster bg-linen dark:bg-bg-secondary w-full"
+              value={title}
+              onChange={(e) => handleTitleChange(e.target.value)}
+              placeholder="Untitled"
+              className="text-h1 font-bold border-none px-0 py-0 bg-transparent focus:outline-none w-full placeholder:text-graphite placeholder:opacity-30"
             />
+
+            <div>
+              <label className="text-label text-graphite mb-1.5 block">Folder</label>
+              <select
+                value={folderId ?? ""}
+                onChange={(e) => handleFolderChange(e.target.value || null)}
+                className="text-small border border-alabaster rounded-md px-2 py-1.5 bg-linen dark:bg-bg-secondary w-full"
+              >
+                <option value="">No folder</option>
+                {folders.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-label text-graphite mb-1.5 block">Tags</label>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {note.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-alabaster text-graphite text-caption"
+                  >
+                    {tag}
+                    <button onClick={() => removeTag(tag)} aria-label={`Remove ${tag}`}>
+                      <span className="text-[10px]">&times;</span>
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <input
+                placeholder="Add tag, press Enter"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addTag(tagInput);
+                  }
+                }}
+                className="text-body px-3 py-2 rounded-lg border border-alabaster bg-linen dark:bg-bg-secondary w-full"
+              />
+            </div>
+
+            <div ref={editorContainerRef}>
+              <RichTextEditor
+                content={content}
+                onChange={handleContentChange}
+                onUploadImage={(file) => uploadInlineImage(note.id, file)}
+                onUploadPdf={(file) => uploadInlineImage(note.id, file)}
+                placeholder="Start writing…"
+              />
+            </div>
+
+            <p className="text-caption text-graphite text-right">
+              Last saved:{" "}
+              {new Date(note.updated_at).toLocaleString("en-US", {
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </p>
           </div>
 
-          <RichTextEditor
-            content={content}
-            onChange={handleContentChange}
-            placeholder="Start writing…"
-          />
-
-          <p className="text-caption text-graphite text-right">
-            Last saved:{" "}
-            {new Date(note.updated_at).toLocaleString("en-US", {
-              month: "short",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            })}
-          </p>
+          <aside className="hidden lg:block w-48 shrink-0 sticky top-6 self-start">
+            <NoteOutline containerRef={editorContainerRef} content={content} />
+          </aside>
         </div>
       </div>
     </div>

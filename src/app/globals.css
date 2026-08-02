@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "katex/dist/katex.min.css";
 
 :root {
   /* Light mode palette */
@@ -379,4 +380,126 @@ body {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Rich text editor node styles */
+.ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0.75rem 0;
+  overflow: hidden;
+}
+.ProseMirror td,
+.ProseMirror th {
+  border: 1px solid var(--alabaster-grey);
+  padding: 6px 10px;
+  vertical-align: top;
+  position: relative;
+}
+.ProseMirror th {
+  background: var(--bg);
+  font-weight: 600;
+  text-align: left;
+}
+.ProseMirror .selectedCell {
+  background: rgba(245, 203, 92, 0.2);
+}
+
+.ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+.ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.ProseMirror ul[data-type="taskList"] li > label {
+  margin-top: 3px;
+}
+.ProseMirror ul[data-type="taskList"] li > div {
+  flex: 1;
+}
+
+.ProseMirror pre {
+  background: var(--carbon-black);
+  color: #f5f5f4;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+.ProseMirror pre code {
+  background: none;
+  padding: 0;
+}
+.ProseMirror .hljs-comment,
+.ProseMirror .hljs-quote {
+  color: #a8a8a6;
+}
+.ProseMirror .hljs-keyword,
+.ProseMirror .hljs-selector-tag,
+.ProseMirror .hljs-built_in {
+  color: #f5cb5c;
+}
+.ProseMirror .hljs-string,
+.ProseMirror .hljs-attr {
+  color: #a3d9a5;
+}
+.ProseMirror .hljs-number,
+.ProseMirror .hljs-literal {
+  color: #f5a5a5;
+}
+.ProseMirror .hljs-title,
+.ProseMirror .hljs-name {
+  color: #8ec9f0;
+}
+
+.ProseMirror [data-callout] {
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0;
+  border-left: 3px solid var(--info);
+  background: rgba(59, 130, 246, 0.08);
+}
+.ProseMirror [data-callout][data-variant="warning"] {
+  border-left-color: var(--warning);
+  background: rgba(245, 158, 11, 0.1);
+}
+.ProseMirror [data-callout][data-variant="tip"] {
+  border-left-color: var(--success);
+  background: rgba(16, 185, 129, 0.1);
+}
+.ProseMirror [data-callout] p:last-child {
+  margin-bottom: 0;
+}
+
+.math-node {
+  display: inline-block;
+  padding: 0 2px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.math-node:hover {
+  background: var(--bg);
+}
+
+.pdf-embed-node {
+  margin: 0.75rem 0;
+  border: 1px solid var(--alabaster-grey);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.pdf-embed-header {
+  padding: 6px 10px;
+  font-size: 0.8em;
+  background: var(--bg);
+  border-bottom: 1px solid var(--alabaster-grey);
+}
+.pdf-embed-frame {
+  width: 100%;
+  height: 480px;
+  border: none;
 }
