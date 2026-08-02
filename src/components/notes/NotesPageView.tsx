@@ -2,40 +2,51 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Star, Folder, FileText, Trash2, MoreHorizontal, Grid3X3, List } from "lucide-react";
+import { Plus, Search, Star, Folder, FileText, Trash2, MoreHorizontal, Grid3X3, List, BookOpen } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/cn";
-import type { Note, NoteFolder } from "@/lib/types";
+import type { Chapter, Note, NoteFolder, Subject } from "@/lib/types";
 import {
   createNote,
   createFolder,
   deleteFolder,
   updateNote,
 } from "@/app/(app)/notes/actions";
+import { StudyNotesBridge } from "./StudyNotesBridge";
 
 type ViewMode = "grid" | "list";
+type NotesTab = "general" | "study";
 
 export function NotesPageView({
   folders,
   notes,
+  subjects = [],
+  chapters = [],
 }: {
   folders: NoteFolder[];
   notes: Note[];
+  subjects?: Subject[];
+  chapters?: Chapter[];
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const [tab, setTab] = useState<NotesTab>("general");
   const [view, setView] = useState<ViewMode>("grid");
   const [search, setSearch] = useState("");
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
   const [addFolderOpen, setAddFolderOpen] = useState(false);
   const [folderName, setFolderName] = useState("");
+  const [folderParentId, setFolderParentId] = useState<string | null>(null);
+
+  const generalNotes = useMemo(() => notes.filter((n) => !n.chapter_id), [notes]);
+  const studyNotes = useMemo(() => notes.filter((n) => n.chapter_id), [notes]);
 
   const filtered = useMemo(() => {
-    let result = notes;
+    let result = generalNotes;
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -47,7 +58,35 @@ export function NotesPageView({
     if (showFavorites) result = result.filter((n) => n.is_favorite);
     if (selectedFolder) result = result.filter((n) => n.folder_id === selectedFolder);
     return result;
-  }, [notes, search, selectedFolder, showFavorites]);
+  }, [generalNotes, search, selectedFolder, showFavorites]);
+
+  function folderDepth(folder: NoteFolder): number {
+    let depth = 0;
+    let current: NoteFolder | undefined = folder;
+    while (current?.parent_folder_id) {
+      current = folders.find((f) => f.id === current!.parent_folder_id);
+      depth += 1;
+      if (depth > 10) break;
+    }
+    return depth;
+  }
+
+  function orderedFolders(): NoteFolder[] {
+    const byParent = new Map<string | null, NoteFolder[]>();
+    for (const f of folders) {
+      const key = f.parent_folder_id;
+      byParent.set(key, [...(byParent.get(key) ?? []), f]);
+    }
+    const result: NoteFolder[] = [];
+    function walk(parentId: string | null) {
+      for (const f of byParent.get(parentId) ?? []) {
+        result.push(f);
+        walk(f.id);
+      }
+    }
+    walk(null);
+    return result;
+  }
 
   function handleCreateNote(folderId: string | null) {
     startTransition(async () => {
@@ -59,104 +98,128 @@ export function NotesPageView({
   function handleAddFolder(e: React.FormEvent) {
     e.preventDefault();
     if (!folderName.trim()) return;
-    startTransition(() => createFolder(folderName));
+    startTransition(() => createFolder(folderName, folderParentId));
     setFolderName("");
+    setFolderParentId(null);
     setAddFolderOpen(false);
   }
 
   return (
-    <div className="flex h-full">
-      {/* Sidebar — folders */}
-      <aside className="hidden md:flex flex-col w-60 border-r border-alabaster p-4 shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-h3">Notes</h2>
-          <Button
-            variant="icon"
-            aria-label="New note"
-            onClick={() => handleCreateNote(selectedFolder)}
+    <div className="flex flex-col h-full">
+      <div className="flex gap-1 border-b border-alabaster px-4 pt-3">
+        {(["general", "study"] as NotesTab[]).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-2 text-small border-b-2 -mb-px transition-fast",
+              tab === t ? "border-tuscan font-semibold" : "border-transparent text-graphite hover:text-text"
+            )}
           >
-            <Plus size={16} />
-          </Button>
+            {t === "general" ? <FileText size={14} /> : <BookOpen size={14} />}
+            {t === "general" ? "General Notes" : "Study Notes"}
+          </button>
+        ))}
+      </div>
+
+      {tab === "study" ? (
+        <div className="flex-1 p-6 overflow-y-auto">
+          <StudyNotesBridge notes={studyNotes} subjects={subjects} chapters={chapters} />
         </div>
+      ) : (
+        <div className="flex flex-1 min-h-0">
+          {/* Sidebar — folders */}
+          <aside className="hidden md:flex flex-col w-60 border-r border-alabaster p-4 shrink-0 overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-h3">Notes</h2>
+              <Button
+                variant="icon"
+                aria-label="New note"
+                onClick={() => handleCreateNote(selectedFolder)}
+              >
+                <Plus size={16} />
+              </Button>
+            </div>
 
-        <button
-          onClick={() => {
-            setSelectedFolder(null);
-            setShowFavorites(false);
-          }}
-          className={cn(
-            "flex items-center gap-2 px-2 py-1.5 rounded-md text-small transition-fast w-full text-left",
-            !selectedFolder && !showFavorites ? "bg-carbon text-white dark:bg-tuscan dark:text-carbon" : "text-graphite hover:bg-bg"
-          )}
-        >
-          <FileText size={16} />
-          All notes
-          <span className="ml-auto text-caption opacity-60">{notes.length}</span>
-        </button>
+            <button
+              onClick={() => {
+                setSelectedFolder(null);
+                setShowFavorites(false);
+              }}
+              className={cn(
+                "flex items-center gap-2 px-2 py-1.5 rounded-md text-small transition-fast w-full text-left",
+                !selectedFolder && !showFavorites ? "bg-carbon text-white dark:bg-tuscan dark:text-carbon" : "text-graphite hover:bg-bg"
+              )}
+            >
+              <FileText size={16} />
+              All notes
+              <span className="ml-auto text-caption opacity-60">{generalNotes.length}</span>
+            </button>
 
-        <button
-          onClick={() => {
-            setSelectedFolder(null);
-            setShowFavorites(true);
-          }}
-          className={cn(
-            "flex items-center gap-2 px-2 py-1.5 rounded-md text-small transition-fast w-full text-left mt-1",
-            showFavorites ? "bg-carbon text-white dark:bg-tuscan dark:text-carbon" : "text-graphite hover:bg-bg"
-          )}
-        >
-          <Star size={16} />
-          Favorites
-          <span className="ml-auto text-caption opacity-60">
-            {notes.filter((n) => n.is_favorite).length}
-          </span>
-        </button>
+            <button
+              onClick={() => {
+                setSelectedFolder(null);
+                setShowFavorites(true);
+              }}
+              className={cn(
+                "flex items-center gap-2 px-2 py-1.5 rounded-md text-small transition-fast w-full text-left mt-1",
+                showFavorites ? "bg-carbon text-white dark:bg-tuscan dark:text-carbon" : "text-graphite hover:bg-bg"
+              )}
+            >
+              <Star size={16} />
+              Favorites
+              <span className="ml-auto text-caption opacity-60">
+                {generalNotes.filter((n) => n.is_favorite).length}
+              </span>
+            </button>
 
-        <div className="mt-4 mb-2 flex items-center justify-between">
-          <span className="text-label text-graphite">Folders</span>
-          <Button variant="icon" aria-label="New folder" onClick={() => setAddFolderOpen(true)}>
-            <Plus size={14} />
-          </Button>
-        </div>
+            <div className="mt-4 mb-2 flex items-center justify-between">
+              <span className="text-label text-graphite">Folders</span>
+              <Button variant="icon" aria-label="New folder" onClick={() => setAddFolderOpen(true)}>
+                <Plus size={14} />
+              </Button>
+            </div>
 
-        <div className="flex flex-col gap-0.5">
-          {folders.length === 0 && (
-            <p className="text-caption text-graphite px-2 py-2">No folders yet</p>
-          )}
-          {folders.map((folder) => {
-            const count = notes.filter((n) => n.folder_id === folder.id).length;
-            return (
-              <div key={folder.id} className="flex items-center gap-1 group">
-                <button
-                  onClick={() => {
-                    setSelectedFolder(folder.id);
-                    setShowFavorites(false);
-                  }}
-                  className={cn(
-                    "flex items-center gap-2 px-2 py-1.5 rounded-md text-small transition-fast flex-1 text-left",
-                    selectedFolder === folder.id
-                      ? "bg-carbon text-white dark:bg-tuscan dark:text-carbon"
-                      : "text-graphite hover:bg-bg"
-                  )}
-                >
-                  <Folder size={16} />
-                  {folder.name}
-                  <span className="ml-auto text-caption opacity-60">{count}</span>
-                </button>
-                <button
-                  aria-label="Delete folder"
-                  onClick={() => startTransition(() => deleteFolder(folder.id))}
-                  className="w-6 h-6 rounded opacity-0 group-hover:opacity-100 hover:bg-bg flex items-center justify-center transition-fast"
-                >
-                  <Trash2 size={12} className="text-graphite" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </aside>
+            <div className="flex flex-col gap-0.5">
+              {folders.length === 0 && (
+                <p className="text-caption text-graphite px-2 py-2">No folders yet</p>
+              )}
+              {orderedFolders().map((folder) => {
+                const count = generalNotes.filter((n) => n.folder_id === folder.id).length;
+                const depth = folderDepth(folder);
+                return (
+                  <div key={folder.id} className="flex items-center gap-1 group" style={{ paddingLeft: depth * 12 }}>
+                    <button
+                      onClick={() => {
+                        setSelectedFolder(folder.id);
+                        setShowFavorites(false);
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 px-2 py-1.5 rounded-md text-small transition-fast flex-1 text-left min-w-0",
+                        selectedFolder === folder.id
+                          ? "bg-carbon text-white dark:bg-tuscan dark:text-carbon"
+                          : "text-graphite hover:bg-bg"
+                      )}
+                    >
+                      <Folder size={16} className="shrink-0" />
+                      <span className="truncate">{folder.name}</span>
+                      <span className="ml-auto text-caption opacity-60 shrink-0">{count}</span>
+                    </button>
+                    <button
+                      aria-label="Delete folder"
+                      onClick={() => startTransition(() => deleteFolder(folder.id))}
+                      className="w-6 h-6 rounded opacity-0 group-hover:opacity-100 hover:bg-bg flex items-center justify-center transition-fast shrink-0"
+                    >
+                      <Trash2 size={12} className="text-graphite" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </aside>
 
-      {/* Main area */}
-      <div className="flex-1 p-6 overflow-y-auto">
+          {/* Main area */}
+          <div className="flex-1 p-6 overflow-y-auto">
         <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
           <h1 className="text-h1">
             {showFavorites ? "Favorites" : selectedFolder
@@ -224,27 +287,47 @@ export function NotesPageView({
             ))}
           </div>
         )}
-      </div>
+          </div>
 
-      <Modal
-        open={addFolderOpen}
-        onClose={() => setAddFolderOpen(false)}
-        title="New folder"
-        footer={
-          <Button type="submit" form="new-folder-form" className="w-full">
-            Create folder
-          </Button>
-        }
-      >
-        <form id="new-folder-form" onSubmit={handleAddFolder}>
-          <Input
-            autoFocus
-            label="Folder name"
-            value={folderName}
-            onChange={(e) => setFolderName(e.target.value)}
-          />
-        </form>
-      </Modal>
+          <Modal
+            open={addFolderOpen}
+            onClose={() => setAddFolderOpen(false)}
+            title="New folder"
+            footer={
+              <Button type="submit" form="new-folder-form" className="w-full">
+                Create folder
+              </Button>
+            }
+          >
+            <form id="new-folder-form" onSubmit={handleAddFolder} className="flex flex-col gap-3">
+              <Input
+                autoFocus
+                label="Folder name"
+                value={folderName}
+                onChange={(e) => setFolderName(e.target.value)}
+              />
+              {folders.length > 0 && (
+                <div>
+                  <label className="text-label text-graphite mb-1.5 block">Parent folder (optional)</label>
+                  <select
+                    value={folderParentId ?? ""}
+                    onChange={(e) => setFolderParentId(e.target.value || null)}
+                    className="text-small border border-alabaster rounded-md px-2 py-1.5 bg-linen dark:bg-bg-secondary w-full"
+                  >
+                    <option value="">No parent (top level)</option>
+                    {orderedFolders().map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {"— ".repeat(folderDepth(f))}
+                        {f.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </form>
+          </Modal>
+        </div>
+      )}
     </div>
   );
 }

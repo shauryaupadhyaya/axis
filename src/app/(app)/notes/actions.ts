@@ -42,14 +42,22 @@ export async function deleteNote(noteId: string) {
   revalidatePath("/notes");
 }
 
-export async function createFolder(name: string) {
+export async function createFolder(name: string, parentFolderId: string | null = null) {
   const { supabase, userId } = await requireUserId();
   const trimmed = name.trim();
   if (!trimmed) return;
   const { data: existing } = await supabase.from("note_folders").select("id").eq("user_id", userId);
   await supabase
     .from("note_folders")
-    .insert({ user_id: userId, name: trimmed, position: existing?.length ?? 0 });
+    .insert({ user_id: userId, name: trimmed, position: existing?.length ?? 0, parent_folder_id: parentFolderId });
+  revalidatePath("/notes");
+}
+
+export async function renameFolder(folderId: string, name: string) {
+  const { supabase, userId } = await requireUserId();
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  await supabase.from("note_folders").update({ name: trimmed }).eq("id", folderId).eq("user_id", userId);
   revalidatePath("/notes");
 }
 
