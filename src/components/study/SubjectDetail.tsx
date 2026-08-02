@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { Button } from "@/components/ui/Button";
 import type { Chapter, Exam, Flashcard, Homework, Note, StudyAttachment, StudySession, Subject } from "@/lib/types";
 import { daysUntil } from "@/lib/scores";
 import { chaptersCompletionPercent, computeSubjectReadiness, totalHours } from "@/lib/study";
+import { createGeneratedNote } from "@/app/(app)/study/actions";
 import { SyllabusTab } from "./SyllabusTab";
 import { RevisionTab } from "./RevisionTab";
 import { HoursTab } from "./HoursTab";
@@ -37,7 +41,22 @@ interface SubjectDetailProps {
 }
 
 export function SubjectDetail({ subject, exams, chapters, studySessions, homework, flashcards, notes, attachments }: SubjectDetailProps) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
   const [tab, setTab] = useState<Tab>("syllabus");
+  const [creatingNoteFor, setCreatingNoteFor] = useState<string | null>(null);
+
+  function handleCreateNote(chapterId: string) {
+    setCreatingNoteFor(chapterId);
+    startTransition(async () => {
+      try {
+        const id = await createGeneratedNote(chapterId, "Untitled", "");
+        router.push(`/notes/${id}`);
+      } finally {
+        setCreatingNoteFor(null);
+      }
+    });
+  }
   const hoursLogged = totalHours(studySessions);
   const readiness = computeSubjectReadiness({ chapters, homework, hoursLogged });
   const mastery = chaptersCompletionPercent(chapters);
@@ -116,7 +135,17 @@ export function SubjectDetail({ subject, exams, chapters, studySessions, homewor
               const chapterNotes = notes.filter((n) => n.chapter_id === chapter.id);
               return (
                 <div key={chapter.id}>
-                  <p className="text-label text-graphite mb-2">{chapter.name}</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-label text-graphite">{chapter.name}</p>
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleCreateNote(chapter.id)}
+                      disabled={creatingNoteFor === chapter.id}
+                      className="flex items-center gap-1.5 !px-2.5 !py-1 text-caption"
+                    >
+                      <Plus size={12} /> {creatingNoteFor === chapter.id ? "Creating…" : "New note"}
+                    </Button>
+                  </div>
                   {chapterNotes.length === 0 ? (
                     <p className="text-caption text-graphite mb-2">No notes yet for this chapter.</p>
                   ) : (

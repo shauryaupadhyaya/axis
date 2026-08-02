@@ -31,15 +31,25 @@ export function FlashcardsTab({ subjectId, subjectName, chapters, flashcards, at
   const [chapterId, setChapterId] = useState("");
   const [aiChapterId, setAiChapterId] = useState<string | null>(null);
   const [flippedId, setFlippedId] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!front.trim() || !back.trim()) return;
-    startTransition(() => {
-      createFlashcard(front, back, { subjectId, chapterId: chapterId || undefined });
-    });
+    setAddError(null);
+    const f = front;
+    const b = back;
+    const cId = chapterId || undefined;
     setFront("");
     setBack("");
+    startTransition(async () => {
+      try {
+        const id = await createFlashcard(f, b, { subjectId, chapterId: cId });
+        if (!id) setAddError("Couldn't add flashcard — try again.");
+      } catch {
+        setAddError("Couldn't add flashcard — try again.");
+      }
+    });
   }
 
   const aiChapter = chapters.find((c) => c.id === aiChapterId);
@@ -70,6 +80,7 @@ export function FlashcardsTab({ subjectId, subjectName, chapters, flashcards, at
             <Plus size={14} /> Add
           </Button>
         </form>
+        {addError && <p className="text-caption text-danger mb-2">{addError}</p>}
         {chapters.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-caption text-graphite">Generate with AI for:</span>

@@ -11,7 +11,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Merge, Plus, Scissors, Sparkles, Trash2 } from "lucide-react";
+import { FileText, GripVertical, Merge, Plus, Scissors, Sparkles, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import type { Chapter, ChapterStatus, StudyAttachment } from "@/lib/types";
@@ -24,7 +24,8 @@ import {
   splitChapter,
   updateChapterStatus,
 } from "@/app/(app)/study/actions";
-import { generateChaptersFromSyllabusText } from "@/lib/ai/study-generation";
+import { generateChaptersFromSyllabusFile, generateChaptersFromSyllabusText } from "@/lib/ai/study-generation";
+import { fileToBase64 } from "@/lib/study-attachments";
 import { ChapterStudyToolsModal } from "./ChapterStudyToolsModal";
 
 function SortableChapterRow({
@@ -45,6 +46,7 @@ function SortableChapterRow({
   const [, startTransition] = useTransition();
   const [splitting, setSplitting] = useState(false);
   const [splitNames, setSplitNames] = useState("");
+  const [mergeTarget, setMergeTarget] = useState("");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: chapter.id });
 
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
@@ -74,9 +76,13 @@ function SortableChapterRow({
         </select>
         {otherChapters.length > 0 && (
           <select
-            defaultValue=""
+            value={mergeTarget}
             onChange={(e) => {
-              if (e.target.value) startTransition(() => mergeChapters(subjectId, chapter.id, e.target.value));
+              const targetId = e.target.value;
+              if (targetId) {
+                startTransition(() => mergeChapters(subjectId, chapter.id, targetId));
+              }
+              setMergeTarget("");
             }}
             className="text-[11px] border border-alabaster rounded-md px-1 py-1 bg-linen dark:bg-bg-secondary shrink-0"
             aria-label="Merge into…"
@@ -143,11 +149,13 @@ export function SyllabusTab({
   attachments?: StudyAttachment[];
 }) {
   const [name, setName] = useState("");
+  const [addError, setAddError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const [order, setOrder] = useState(() => [...chapters].sort((a, b) => a.position - b.position).map((c) => c.id));
   const [syllabusOpen, setSyllabusOpen] = useState(false);
   const [syllabusText, setSyllabusText] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
   const [aiChapterId, setAiChapterId] = useState<string | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -160,10 +168,17 @@ export function SyllabusTab({
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    startTransition(() => {
-      addChapter(subjectId, name);
-    });
+    setAddError(null);
+    const chapterName = name;
     setName("");
+    startTransition(async () => {
+      try {
+        const id = await addChapter(subjectId, chapterName);
+        if (!id) setAddError("Couldn't add chapter — try again.");
+      } catch {
+        setAddError("Couldn't add chapter — try again.");
+      }
+    });
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -181,12 +196,42 @@ export function SyllabusTab({
 
   async function handleGenerate() {
     setGenerating(true);
+    setGenError(null);
     try {
       const { addChaptersBulk } = await import("@/app/(app)/study/actions");
-      const result = await generateChaptersFromSyllabusText("this subject", syllabusText);
-      if (result.length > 0) await addChaptersBulk(subjectId, result);
+      const result = await generateChaptersFromSyllabusText(subjectName, syllabusText);
+      if (result.length === 0) {
+        setGenError("Couldn't find chapters in that text — try pasting more of the syllabus.");
+        return;
+      }
+      await addChaptersBulk(subjectId, result);
       setSyllabusText("");
       setSyllabusOpen(false);
+    } catch {
+      setGenError("Chapter generation failed — try again.");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function handleGenerateFromFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setGenerating(true);
+    setGenError(null);
+    try {
+      const { addChaptersBulk } = await import("@/app/(app)/study/actions");
+      const base64 = await fileToBase64(file);
+      const result = await generateChaptersFromSyllabusFile(subjectName, base64, file.type || "application/pdf");
+      if (result.length === 0) {
+        setGenError("Couldn't find chapters in that file — try pasting the syllabus text instead.");
+        return;
+      }
+      await addChaptersBulk(subjectId, result);
+      setSyllabusOpen(false);
+    } catch {
+      setGenError("Chapter generation failed — try again.");
     } finally {
       setGenerating(false);
     }
@@ -216,15 +261,16 @@ export function SyllabusTab({
         )}
       </div>
 
-      <form onSubmit={handleAdd} className="flex gap-2 max-w-sm mb-3">
+      <form onSubmit={handleAdd} className="flex gap-2 max-w-sm mb-1">
         <Input placeholder="Add chapter…" value={name} onChange={(e) => setName(e.target.value)} className="flex-1" />
         <Button type="submit" variant="icon" aria-label="Add chapter">
           <Plus size={16} />
         </Button>
       </form>
+      {addError && <p className="text-caption text-danger mb-2">{addError}</p>}
 
       <button onClick={() => setSyllabusOpen((v) => !v)} className="text-caption text-tuscan flex items-center gap-1.5 mb-2">
-        <Sparkles size={12} /> Generate more chapters from syllabus text
+        <Sparkles size={12} /> Generate more chapters from a syllabus
       </button>
       {syllabusOpen && (
         <div className="flex flex-col gap-2 max-w-lg">
@@ -235,9 +281,16 @@ export function SyllabusTab({
             rows={4}
             className="text-small px-3 py-2 rounded-md border border-alabaster bg-linen dark:bg-bg-secondary resize-none"
           />
-          <Button variant="secondary" onClick={handleGenerate} disabled={!syllabusText.trim() || generating} className="w-fit flex items-center gap-1.5">
-            <Merge size={14} /> {generating ? "Generating…" : "Generate & add chapters"}
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="secondary" onClick={handleGenerate} disabled={!syllabusText.trim() || generating} className="flex items-center gap-1.5">
+              <Merge size={14} /> {generating ? "Generating…" : "Generate from text"}
+            </Button>
+            <label className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-graphite text-sm font-semibold cursor-pointer hover:bg-linen transition-fast">
+              <FileText size={14} /> Upload PDF instead
+              <input type="file" accept="application/pdf,image/*" className="hidden" onChange={handleGenerateFromFile} disabled={generating} />
+            </label>
+          </div>
+          {genError && <p className="text-caption text-danger">{genError}</p>}
         </div>
       )}
 

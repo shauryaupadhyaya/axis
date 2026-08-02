@@ -104,13 +104,18 @@ export function SubjectCreateModal({ open, onClose }: { open: boolean; onClose: 
   async function handleCreate() {
     if (!name.trim()) return;
     setCreating(true);
+    setGenError(null);
     try {
       const id = await createSubject(name);
-      if (id) {
-        if (chapters.length > 0) await addChaptersBulk(id, chapters);
-        handleClose();
-        router.push(`/study/${id}`);
+      if (!id) {
+        setGenError("Couldn't create subject — try again.");
+        return;
       }
+      if (chapters.length > 0) await addChaptersBulk(id, chapters);
+      handleClose();
+      router.push(`/study/${id}`);
+    } catch {
+      setGenError("Couldn't create subject — try again.");
     } finally {
       setCreating(false);
     }
@@ -123,14 +128,15 @@ export function SubjectCreateModal({ open, onClose }: { open: boolean; onClose: 
       title="New subject"
       footer={
         path !== "choose" && (
-          <>
+          <div className="flex items-center gap-2 flex-wrap">
             <Button variant="secondary" onClick={() => setPath("choose")}>
               Back
             </Button>
             <Button onClick={handleCreate} disabled={!name.trim() || creating}>
               {creating ? "Creating…" : `Create subject${chapters.length ? ` (${chapters.length} chapters)` : ""}`}
             </Button>
-          </>
+            {genError && path === "manual" && <p className="text-caption text-danger w-full">{genError}</p>}
+          </div>
         )
       }
     >

@@ -65,6 +65,8 @@ export function HomeworkTab({ subjectId, homework, chapters = [] }: { subjectId:
   const [newDueDate, setNewDueDate] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
+  const [addError, setAddError] = useState<string | null>(null);
+
   const selected = homework.find((h) => h.id === selectedId) ?? null;
   const buckets = bucketHomework(homework);
   const completed = homework.filter((h) => h.status === "completed");
@@ -72,14 +74,23 @@ export function HomeworkTab({ subjectId, homework, chapters = [] }: { subjectId:
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!newTitle.trim()) return;
+    setAddError(null);
     const title = newTitle;
     const dueDate = newDueDate;
-    startTransition(async () => {
-      const id = await createHomework(subjectId, title);
-      if (id && dueDate) await updateHomework(subjectId, id, { due_at: dueDate });
-    });
     setNewTitle("");
     setNewDueDate(null);
+    startTransition(async () => {
+      try {
+        const id = await createHomework(subjectId, title);
+        if (!id) {
+          setAddError("Couldn't add homework — try again.");
+          return;
+        }
+        if (dueDate) await updateHomework(subjectId, id, { due_at: dueDate });
+      } catch {
+        setAddError("Couldn't add homework — try again.");
+      }
+    });
   }
 
   return (
@@ -96,6 +107,7 @@ export function HomeworkTab({ subjectId, homework, chapters = [] }: { subjectId:
           <Plus size={16} /> Add
         </Button>
       </form>
+      {addError && <p className="text-caption text-danger mb-3">{addError}</p>}
 
       {homework.length === 0 ? (
         <p className="text-small text-graphite py-8 text-center">No homework yet. Add one above.</p>

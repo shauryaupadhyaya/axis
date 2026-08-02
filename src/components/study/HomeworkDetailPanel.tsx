@@ -49,6 +49,7 @@ export function HomeworkDetailPanel({
     >
       <div className="flex flex-col gap-5">
         <Input
+          key={homework.id}
           label="Title"
           defaultValue={homework.title}
           onBlur={(e) =>
@@ -60,6 +61,7 @@ export function HomeworkDetailPanel({
         <div>
           <label className="text-label text-graphite mb-1.5 block">Description</label>
           <RichTextEditor
+            key={homework.id}
             content={homework.description ?? ""}
             onChange={(html) => startTransition(() => updateHomework(subjectId, homework.id, { description: html }))}
           />

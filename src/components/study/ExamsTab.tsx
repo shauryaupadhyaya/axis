@@ -30,16 +30,28 @@ export function ExamsTab({
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [date, setDate] = useState<string | null>(toISODate(new Date()));
+  const [addError, setAddError] = useState<string | null>(null);
   const hoursLogged = totalHours(studySessions);
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !date) return;
-    startTransition(() => {
-      createExam(subjectId, name, date);
+    setAddError(null);
+    const examName = name;
+    const examDate = date;
+    startTransition(async () => {
+      try {
+        const id = await createExam(subjectId, examName, examDate);
+        if (!id) {
+          setAddError("Couldn't add exam — try again.");
+          return;
+        }
+        setName("");
+        setAdding(false);
+      } catch {
+        setAddError("Couldn't add exam — try again.");
+      }
     });
-    setName("");
-    setAdding(false);
   }
 
   return (
@@ -56,6 +68,7 @@ export function ExamsTab({
           <form onSubmit={handleAdd} className="flex flex-col gap-3">
             <Input autoFocus label="Exam name" placeholder="e.g. Unit Test 1" value={name} onChange={(e) => setName(e.target.value)} />
             <DatePicker label="Date" value={date} onChange={setDate} />
+            {addError && <p className="text-caption text-danger">{addError}</p>}
             <Button type="submit">Create</Button>
           </form>
         </Card>
