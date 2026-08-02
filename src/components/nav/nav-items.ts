@@ -1,4 +1,4 @@
-import { Home, ListChecks, Calendar, BookOpen, HeartPulse, Repeat, StickyNote, User } from "lucide-react";
+import { Home, ListChecks, Calendar, BookOpen, HeartPulse, Repeat, StickyNote, User, Search } from "lucide-react";
 
 export const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
@@ -11,5 +11,6 @@ export const NAV_ITEMS = [
 
 export const NAV_ITEMS_SECONDARY = [
   { href: "/notes", label: "Notes", icon: StickyNote },
+  { href: "/search", label: "Search", icon: Search },
   { href: "/profile", label: "Profile", icon: User },
 ] as const;
