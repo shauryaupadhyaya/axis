@@ -84,6 +84,19 @@ export function totalHours(sessions: StudySession[]): number {
   return Math.round((sessions.reduce((sum, s) => sum + s.minutes, 0) / 60) * 10) / 10;
 }
 
+/** Hours logged within the trailing `days` window (7 for week, 30 for month, 365 for year). */
+export function hoursInWindow(sessions: StudySession[], days: number, now = new Date()): number {
+  const cutoff = new Date(now);
+  cutoff.setDate(cutoff.getDate() - days);
+  const inWindow = sessions.filter((s) => new Date(s.logged_at) >= cutoff);
+  return totalHours(inWindow);
+}
+
+export function averageSessionMinutes(sessions: StudySession[]): number {
+  if (sessions.length === 0) return 0;
+  return Math.round(sessions.reduce((sum, s) => sum + s.minutes, 0) / sessions.length);
+}
+
 export interface HomeworkBuckets {
   overdue: Homework[];
   dueToday: Homework[];

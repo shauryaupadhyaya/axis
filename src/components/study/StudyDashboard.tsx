@@ -11,12 +11,14 @@ export function StudyDashboard({
   pomodoroSessions,
   notes,
   homework,
+  defaultSubjectId,
 }: {
   subjects: Subject[];
   studySessions: StudySession[];
   pomodoroSessions: PomodoroSession[];
   notes: Note[];
   homework: Homework[];
+  defaultSubjectId?: string;
 }) {
   const activityDates = buildStudyActivityDates({ studySessions, pomodoroSessions, notes, homework });
   const streak = computeStudyStreak(activityDates);
@@ -24,7 +26,7 @@ export function StudyDashboard({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
       <Card className="flex items-center justify-center">
-        <PomodoroTimer subjects={subjects} />
+        <PomodoroTimer subjects={subjects} defaultSubjectId={defaultSubjectId} />
       </Card>
       <Card>
         <h3 className="text-h3 mb-3">Study streak</h3>

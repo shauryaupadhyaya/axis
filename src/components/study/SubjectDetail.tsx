@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { BookOpen, CalendarClock, ClipboardList, FileText, Plus, Sparkles, Timer, Upload } from "lucide-react";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Button } from "@/components/ui/Button";
 import type { Chapter, Exam, Flashcard, Homework, Note, StudyAttachment, StudySession, Subject } from "@/lib/types";
@@ -99,6 +99,32 @@ export function SubjectDetail({ subject, exams, chapters, studySessions, homewor
           <p className="text-display">{mastery}%</p>
           <p className="text-caption text-graphite">Mastered</p>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap mb-4">
+        <Link href={`/study?subject=${subject.id}`}>
+          <Button variant="secondary" className="flex items-center gap-1.5 !px-3 !py-1.5 text-caption">
+            <Timer size={13} /> Start study session
+          </Button>
+        </Link>
+        <Button variant="secondary" onClick={() => setTab("syllabus")} className="flex items-center gap-1.5 !px-3 !py-1.5 text-caption">
+          <BookOpen size={13} /> Add chapter
+        </Button>
+        <Button variant="secondary" onClick={() => setTab("syllabus")} className="flex items-center gap-1.5 !px-3 !py-1.5 text-caption">
+          <Upload size={13} /> Upload PDF
+        </Button>
+        <Button variant="secondary" onClick={() => setTab("syllabus")} className="flex items-center gap-1.5 !px-3 !py-1.5 text-caption">
+          <Sparkles size={13} /> Generate notes
+        </Button>
+        <Button variant="secondary" onClick={() => setTab("notes")} className="flex items-center gap-1.5 !px-3 !py-1.5 text-caption">
+          <FileText size={13} /> Add note
+        </Button>
+        <Button variant="secondary" onClick={() => setTab("homework")} className="flex items-center gap-1.5 !px-3 !py-1.5 text-caption">
+          <ClipboardList size={13} /> Add homework
+        </Button>
+        <Button variant="secondary" onClick={() => setTab("exams")} className="flex items-center gap-1.5 !px-3 !py-1.5 text-caption">
+          <CalendarClock size={13} /> Add exam
+        </Button>
       </div>
 
       <div className="flex gap-1 border border-alabaster rounded-lg p-1 w-fit mb-5 flex-wrap">

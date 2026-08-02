@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import Link from "next/link";
+import { BarChart3, Plus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { SubjectCreateModal } from "./SubjectCreateModal";
@@ -19,6 +20,7 @@ export function SubjectsList({
   studySessions = [],
   pomodoroSessions = [],
   notes = [],
+  preselectedSubjectId,
 }: {
   subjects: Subject[];
   exams: Exam[];
@@ -27,6 +29,7 @@ export function SubjectsList({
   studySessions?: StudySession[];
   pomodoroSessions?: PomodoroSession[];
   notes?: Note[];
+  preselectedSubjectId?: string;
 }) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
@@ -35,9 +38,16 @@ export function SubjectsList({
     <div className="p-6">
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-h1">Study</h1>
-        <Button onClick={() => setCreating(true)} className="flex items-center gap-1.5">
-          <Plus size={16} /> Add subject
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href="/study/analytics">
+            <Button variant="secondary" className="flex items-center gap-1.5">
+              <BarChart3 size={16} /> Analytics
+            </Button>
+          </Link>
+          <Button onClick={() => setCreating(true)} className="flex items-center gap-1.5">
+            <Plus size={16} /> Add subject
+          </Button>
+        </div>
       </div>
 
       <StudyDashboard
@@ -46,6 +56,7 @@ export function SubjectsList({
         pomodoroSessions={pomodoroSessions}
         notes={notes}
         homework={homework}
+        defaultSubjectId={preselectedSubjectId}
       />
 
       {subjects.length === 0 ? (
