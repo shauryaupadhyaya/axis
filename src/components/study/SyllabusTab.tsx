@@ -14,7 +14,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Merge, Plus, Scissors, Sparkles, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import type { Chapter, ChapterStatus } from "@/lib/types";
+import type { Chapter, ChapterStatus, StudyAttachment } from "@/lib/types";
 import { CHAPTER_STATUS_LABEL, CHAPTER_STATUS_DOT, CHAPTER_STATUS_ORDER, chapterMasteryPercent } from "@/lib/study";
 import {
   addChapter,
@@ -25,6 +25,7 @@ import {
   updateChapterStatus,
 } from "@/app/(app)/study/actions";
 import { generateChaptersFromSyllabusText } from "@/lib/ai/study-generation";
+import { ChapterStudyToolsModal } from "./ChapterStudyToolsModal";
 
 function SortableChapterRow({
   chapter,
@@ -32,12 +33,14 @@ function SortableChapterRow({
   allChapters,
   notesCount,
   homeworkCount,
+  onOpenAiTools,
 }: {
   chapter: Chapter;
   subjectId: string;
   allChapters: Chapter[];
   notesCount: number;
   homeworkCount: number;
+  onOpenAiTools: (chapterId: string) => void;
 }) {
   const [, startTransition] = useTransition();
   const [splitting, setSplitting] = useState(false);
@@ -86,6 +89,9 @@ function SortableChapterRow({
             ))}
           </select>
         )}
+        <button aria-label="AI study tools" onClick={() => onOpenAiTools(chapter.id)} className="text-graphite hover:text-tuscan shrink-0">
+          <Sparkles size={14} />
+        </button>
         <button aria-label="Split chapter" onClick={() => setSplitting((v) => !v)} className="text-graphite hover:text-text shrink-0">
           <Scissors size={14} />
         </button>
@@ -123,14 +129,18 @@ function SortableChapterRow({
 
 export function SyllabusTab({
   subjectId,
+  subjectName,
   chapters,
   notesCountByChapter = {},
   homeworkCountByChapter = {},
+  attachments = [],
 }: {
   subjectId: string;
+  subjectName: string;
   chapters: Chapter[];
   notesCountByChapter?: Record<string, number>;
   homeworkCountByChapter?: Record<string, number>;
+  attachments?: StudyAttachment[];
 }) {
   const [name, setName] = useState("");
   const [, startTransition] = useTransition();
@@ -138,6 +148,7 @@ export function SyllabusTab({
   const [syllabusOpen, setSyllabusOpen] = useState(false);
   const [syllabusText, setSyllabusText] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [aiChapterId, setAiChapterId] = useState<string | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   const chapterById = new Map(chapters.map((c) => [c.id, c]));
@@ -197,6 +208,7 @@ export function SyllabusTab({
                   allChapters={chapters}
                   notesCount={notesCountByChapter[chapter.id] ?? 0}
                   homeworkCount={homeworkCountByChapter[chapter.id] ?? 0}
+                  onOpenAiTools={setAiChapterId}
                 />
               ))}
             </SortableContext>
@@ -227,6 +239,18 @@ export function SyllabusTab({
             <Merge size={14} /> {generating ? "Generating…" : "Generate & add chapters"}
           </Button>
         </div>
+      )}
+
+      {aiChapterId && (
+        <ChapterStudyToolsModal
+          open={aiChapterId !== null}
+          onClose={() => setAiChapterId(null)}
+          subjectId={subjectId}
+          subjectName={subjectName}
+          chapterId={aiChapterId}
+          chapterName={chapterById.get(aiChapterId)?.name ?? ""}
+          attachments={attachments.filter((a) => a.chapter_id === aiChapterId)}
+        />
       )}
     </div>
   );

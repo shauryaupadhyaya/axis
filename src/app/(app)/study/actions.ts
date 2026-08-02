@@ -356,3 +356,63 @@ export async function deleteFlashcard(flashcardId: string) {
   const { supabase, userId } = await requireUserId();
   await supabase.from("flashcards").delete().eq("id", flashcardId).eq("user_id", userId);
 }
+
+export async function createFlashcardsBulk(
+  cards: Array<{ front: string; back: string }>,
+  opts: { subjectId?: string; chapterId?: string; noteId?: string }
+) {
+  const { supabase, userId } = await requireUserId();
+  const cleaned = cards.filter((c) => c.front.trim() && c.back.trim());
+  if (cleaned.length === 0) return;
+  await supabase.from("flashcards").insert(
+    cleaned.map((c) => ({
+      user_id: userId,
+      subject_id: opts.subjectId ?? null,
+      chapter_id: opts.chapterId ?? null,
+      note_id: opts.noteId ?? null,
+      front: c.front.trim(),
+      back: c.back.trim(),
+    }))
+  );
+  if (opts.subjectId) revalidatePath(`/study/${opts.subjectId}`);
+}
+
+// ============ AI-generated study notes ============
+export async function createGeneratedNote(chapterId: string, title: string, contentHtml: string) {
+  const { supabase, userId } = await requireUserId();
+  const { data, error } = await supabase
+    .from("notes")
+    .insert({ user_id: userId, chapter_id: chapterId, title: title || "Untitled", content: contentHtml })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath("/study");
+  revalidatePath("/notes");
+  return data.id as string;
+}
+
+// ============ Study attachments (PDFs/worksheets per chapter) ============
+export async function addStudyAttachment(
+  chapterId: string,
+  fileName: string,
+  storagePath: string,
+  sizeBytes: number,
+  mimeType: string
+) {
+  const { supabase, userId } = await requireUserId();
+  const { data, error } = await supabase
+    .from("study_attachments")
+    .insert({ user_id: userId, chapter_id: chapterId, file_name: fileName, storage_path: storagePath, size_bytes: sizeBytes, mime_type: mimeType })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath("/study");
+  return data.id as string;
+}
+
+export async function removeStudyAttachment(attachmentId: string, storagePath: string) {
+  const { supabase, userId } = await requireUserId();
+  await supabase.storage.from("study-attachments").remove([storagePath]);
+  await supabase.from("study_attachments").delete().eq("id", attachmentId).eq("user_id", userId);
+  revalidatePath("/study");
+}

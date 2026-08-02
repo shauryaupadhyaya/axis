@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import type { Chapter, Exam, Homework, StudySession, Subject } from "@/lib/types";
+import type { Chapter, Exam, Flashcard, Homework, Note, StudyAttachment, StudySession, Subject } from "@/lib/types";
 import { daysUntil } from "@/lib/scores";
 import { chaptersCompletionPercent, computeSubjectReadiness, totalHours } from "@/lib/study";
 import { SyllabusTab } from "./SyllabusTab";
@@ -10,13 +11,15 @@ import { RevisionTab } from "./RevisionTab";
 import { HoursTab } from "./HoursTab";
 import { HomeworkTab } from "./HomeworkTab";
 import { ExamsTab } from "./ExamsTab";
+import { FlashcardsTab } from "./FlashcardsTab";
 
-type Tab = "syllabus" | "notes" | "revision" | "hours" | "homework" | "exams";
+type Tab = "syllabus" | "notes" | "flashcards" | "revision" | "hours" | "homework" | "exams";
 
 const TAB_LABEL: Record<Tab, string> = {
   syllabus: "Chapters",
   homework: "Homework",
   notes: "Notes",
+  flashcards: "Flashcards",
   revision: "Revision",
   exams: "Exams",
   hours: "Analytics",
@@ -28,9 +31,12 @@ interface SubjectDetailProps {
   chapters: Chapter[];
   studySessions: StudySession[];
   homework: Homework[];
+  flashcards: Flashcard[];
+  notes: Note[];
+  attachments: StudyAttachment[];
 }
 
-export function SubjectDetail({ subject, exams, chapters, studySessions, homework }: SubjectDetailProps) {
+export function SubjectDetail({ subject, exams, chapters, studySessions, homework, flashcards, notes, attachments }: SubjectDetailProps) {
   const [tab, setTab] = useState<Tab>("syllabus");
   const hoursLogged = totalHours(studySessions);
   const readiness = computeSubjectReadiness({ chapters, homework, hoursLogged });
@@ -77,7 +83,7 @@ export function SubjectDetail({ subject, exams, chapters, studySessions, homewor
       </div>
 
       <div className="flex gap-1 border border-alabaster rounded-lg p-1 w-fit mb-5 flex-wrap">
-        {(["syllabus", "homework", "notes", "revision", "exams", "hours"] as Tab[]).map((t) => (
+        {(["syllabus", "homework", "notes", "flashcards", "revision", "exams", "hours"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -93,16 +99,50 @@ export function SubjectDetail({ subject, exams, chapters, studySessions, homewor
       {tab === "syllabus" && (
         <SyllabusTab
           subjectId={subject.id}
+          subjectName={subject.name}
           chapters={chapters}
           notesCountByChapter={notesCountByChapter}
           homeworkCountByChapter={homeworkCountByChapter}
+          attachments={attachments}
         />
       )}
       {tab === "homework" && <HomeworkTab subjectId={subject.id} homework={homework} chapters={chapters} />}
       {tab === "notes" && (
-        <p className="text-small text-graphite py-8 text-center">
-          Study notes for this subject live in <span className="font-semibold">Notes → Study Notes</span>, linked per chapter.
-        </p>
+        <div className="flex flex-col gap-4">
+          {chapters.length === 0 ? (
+            <p className="text-small text-graphite py-8 text-center">Add chapters in Chapters first, then generate or write notes per chapter.</p>
+          ) : (
+            chapters.map((chapter) => {
+              const chapterNotes = notes.filter((n) => n.chapter_id === chapter.id);
+              return (
+                <div key={chapter.id}>
+                  <p className="text-label text-graphite mb-2">{chapter.name}</p>
+                  {chapterNotes.length === 0 ? (
+                    <p className="text-caption text-graphite mb-2">No notes yet for this chapter.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {chapterNotes.map((note) => (
+                        <Link
+                          key={note.id}
+                          href={`/notes/${note.id}`}
+                          className="block rounded-lg border border-alabaster px-3 py-2.5 hover:border-tuscan transition-fast"
+                        >
+                          <p className="text-small font-semibold truncate">{note.title || "Untitled"}</p>
+                          <p className="text-caption text-graphite">
+                            {new Date(note.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </p>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+      {tab === "flashcards" && (
+        <FlashcardsTab subjectId={subject.id} subjectName={subject.name} chapters={chapters} flashcards={flashcards} attachments={attachments} />
       )}
       {tab === "revision" && <RevisionTab subjectId={subject.id} chapters={chapters} />}
       {tab === "exams" && <ExamsTab subjectId={subject.id} exams={exams} chapters={chapters} homework={homework} studySessions={studySessions} />}
