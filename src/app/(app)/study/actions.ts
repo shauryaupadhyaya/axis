@@ -121,15 +121,6 @@ export async function splitChapter(subjectId: string, chapterId: string, newChap
 }
 
 // ============ Revision ============
-export const REVISION_STATUS_ORDER: ChapterStatus[] = [
-  "not_started",
-  "learning",
-  "in_progress",
-  "revised_once",
-  "revised_twice",
-  "mastered",
-];
-
 export async function logRevisionSession(subjectId: string, chapterId: string, minutes: number) {
   const { supabase, userId } = await requireUserId();
   const { data: chapter } = await supabase
