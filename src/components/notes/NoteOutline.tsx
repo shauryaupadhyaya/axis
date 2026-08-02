@@ -46,14 +46,14 @@ export function NoteOutline({
     if (!container) return;
 
     const raf = requestAnimationFrame(() => {
-      const headings = Array.from(container.querySelectorAll("h2, h3")) as HTMLElement[];
+      const headings = Array.from(container.querySelectorAll("h1, h2, h3, h4")) as HTMLElement[];
       const usedIds = new Set<string>();
       headings.forEach((h) => {
         if (h.id) usedIds.add(h.id);
       });
       const nextItems: OutlineItem[] = headings.map((h) => {
         if (!h.id) h.id = slugify(h.textContent ?? "", usedIds);
-        return { id: h.id, text: h.textContent ?? "", level: h.tagName === "H2" ? 2 : 3 };
+        return { id: h.id, text: h.textContent ?? "", level: Number(h.tagName.slice(1)) };
       });
       setItems(nextItems);
     });
@@ -92,6 +92,8 @@ export function NoteOutline({
 
   if (items.length === 0) return null;
 
+  const minLevel = Math.min(...items.map((i) => i.level));
+
   return (
     <nav className="flex flex-col gap-0.5">
       <p className="text-label text-graphite mb-1.5">Outline</p>
@@ -99,9 +101,9 @@ export function NoteOutline({
         <button
           key={item.id}
           onClick={() => handleClick(item.id)}
+          style={{ paddingLeft: 8 + (item.level - minLevel) * 12 }}
           className={cn(
-            "text-left text-caption truncate transition-fast rounded-md px-2 py-1",
-            item.level === 3 && "pl-4",
+            "text-left text-caption truncate transition-fast rounded-md py-1 pr-2",
             activeId === item.id ? "text-tuscan font-semibold bg-tuscan/10" : "text-graphite hover:text-text"
           )}
         >
