@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { NoteEditorView } from "@/components/notes/NoteEditorView";
+import { NoteOverview } from "@/components/notes/NoteOverview";
 import type { Note, NoteFolder } from "@/lib/types";
 
 export default async function NoteDetailPage({
@@ -19,7 +19,7 @@ export default async function NoteDetailPage({
   if (!noteRes.data) notFound();
 
   return (
-    <NoteEditorView
+    <NoteOverview
       note={noteRes.data as Note}
       folders={(foldersRes.data as NoteFolder[]) ?? []}
     />
