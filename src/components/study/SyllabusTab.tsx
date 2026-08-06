@@ -11,7 +11,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { FileText, GripVertical, Merge, Plus, Scissors, Sparkles, Trash2 } from "lucide-react";
+import { ClipboardList, FileText, GripVertical, Merge, Plus, Scissors, Sparkles, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import type { Chapter, ChapterStatus, StudyAttachment } from "@/lib/types";
@@ -35,6 +35,7 @@ function SortableChapterRow({
   notesCount,
   homeworkCount,
   onOpenAiTools,
+  onJumpToChapter,
 }: {
   chapter: Chapter;
   subjectId: string;
@@ -42,6 +43,7 @@ function SortableChapterRow({
   notesCount: number;
   homeworkCount: number;
   onOpenAiTools: (chapterId: string) => void;
+  onJumpToChapter?: (target: "notes" | "homework", chapterId: string) => void;
 }) {
   const [, startTransition] = useTransition();
   const [splitting, setSplitting] = useState(false);
@@ -53,16 +55,30 @@ function SortableChapterRow({
   const otherChapters = allChapters.filter((c) => c.id !== chapter.id);
 
   return (
-    <div ref={setNodeRef} style={style} className="flex flex-col gap-2 px-4 py-3">
+    <div ref={setNodeRef} style={style} className="flex flex-col gap-2 px-4 py-3 hover:bg-bg transition-fast">
       <div className="flex items-center gap-3">
         <button {...attributes} {...listeners} aria-label="Drag to reorder" className="text-graphite cursor-grab active:cursor-grabbing">
           <GripVertical size={14} />
         </button>
         <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${CHAPTER_STATUS_DOT[chapter.status]}`} />
         <span className="flex-1 text-body min-w-0 truncate">{chapter.name}</span>
-        <span className="text-[11px] text-graphite shrink-0">
-          {chapterMasteryPercent(chapter.status)}% · {notesCount} notes · {homeworkCount} hw
-        </span>
+        <span className="text-[11px] text-graphite shrink-0">{chapterMasteryPercent(chapter.status)}%</span>
+        <button
+          type="button"
+          onClick={() => onJumpToChapter?.("notes", chapter.id)}
+          title="View notes for this chapter"
+          className="flex items-center gap-1 text-[11px] text-graphite hover:text-tuscan shrink-0 px-1.5 py-0.5 rounded-md hover:bg-bg-secondary transition-fast"
+        >
+          <FileText size={11} /> {notesCount}
+        </button>
+        <button
+          type="button"
+          onClick={() => onJumpToChapter?.("homework", chapter.id)}
+          title="View homework for this chapter"
+          className="flex items-center gap-1 text-[11px] text-graphite hover:text-tuscan shrink-0 px-1.5 py-0.5 rounded-md hover:bg-bg-secondary transition-fast"
+        >
+          <ClipboardList size={11} /> {homeworkCount}
+        </button>
         <select
           value={chapter.status}
           onChange={(e) => startTransition(() => updateChapterStatus(subjectId, chapter.id, e.target.value as ChapterStatus))}
@@ -140,6 +156,7 @@ export function SyllabusTab({
   notesCountByChapter = {},
   homeworkCountByChapter = {},
   attachments = [],
+  onJumpToChapter,
 }: {
   subjectId: string;
   subjectName: string;
@@ -147,6 +164,7 @@ export function SyllabusTab({
   notesCountByChapter?: Record<string, number>;
   homeworkCountByChapter?: Record<string, number>;
   attachments?: StudyAttachment[];
+  onJumpToChapter?: (target: "notes" | "homework", chapterId: string) => void;
 }) {
   const [name, setName] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
@@ -254,6 +272,7 @@ export function SyllabusTab({
                   notesCount={notesCountByChapter[chapter.id] ?? 0}
                   homeworkCount={homeworkCountByChapter[chapter.id] ?? 0}
                   onOpenAiTools={setAiChapterId}
+                  onJumpToChapter={onJumpToChapter}
                 />
               ))}
             </SortableContext>

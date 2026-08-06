@@ -61,8 +61,8 @@ export function NoteEditorFull({ note }: { note: Note }) {
   const saveLabel = saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Auto Saved" : "";
 
   return (
-    <div className="flex flex-col h-full">
-      <header className="flex items-center gap-3 px-5 py-3 border-b border-alabaster">
+    <div className="fixed inset-0 md:pl-[60px] lg:pl-60 pb-[60px] md:pb-0 flex flex-col bg-bg">
+      <header className="flex items-center gap-3 px-5 py-3 border-b border-alabaster shrink-0">
         <Link
           href={`/notes/${note.id}`}
           aria-label="Back to note"
