@@ -201,7 +201,7 @@ export async function discardPomodoro(pomodoroId: string) {
 export async function createHomework(
   subjectId: string,
   title: string,
-  extra?: { description?: string; dueAt?: string | null; priority?: Priority; chapterId?: string | null }
+  extra?: { description?: string; givenAt?: string | null; dueAt?: string | null; priority?: Priority; chapterId?: string | null }
 ) {
   const { supabase, userId } = await requireUserId();
   const trimmed = title.trim();
@@ -213,6 +213,7 @@ export async function createHomework(
       subject_id: subjectId,
       title: trimmed,
       description: extra?.description || null,
+      given_at: extra?.givenAt ?? null,
       due_at: extra?.dueAt ?? null,
       priority: extra?.priority ?? "medium",
       chapter_id: extra?.chapterId ?? null,
@@ -232,6 +233,7 @@ export async function updateHomework(
   updates: Partial<{
     title: string;
     description: string;
+    given_at: string | null;
     due_at: string | null;
     priority: Priority;
     status: HomeworkStatus;

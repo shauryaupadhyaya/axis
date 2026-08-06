@@ -67,11 +67,18 @@ export function HomeworkDetailPanel({
           />
         </div>
 
-        <DatePicker
-          label="Due date"
-          value={homework.due_at ? homework.due_at.slice(0, 10) : null}
-          onChange={(date) => startTransition(() => updateHomework(subjectId, homework.id, { due_at: date }))}
-        />
+        <div className="flex gap-3">
+          <DatePicker
+            label="Given date"
+            value={homework.given_at ? homework.given_at.slice(0, 10) : null}
+            onChange={(date) => startTransition(() => updateHomework(subjectId, homework.id, { given_at: date }))}
+          />
+          <DatePicker
+            label="Due date"
+            value={homework.due_at ? homework.due_at.slice(0, 10) : null}
+            onChange={(date) => startTransition(() => updateHomework(subjectId, homework.id, { due_at: date }))}
+          />
+        </div>
 
         <div>
           <label className="text-label text-graphite mb-1.5 block">Priority</label>

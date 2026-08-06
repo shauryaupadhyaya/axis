@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, CalendarClock, ClipboardList, FileText, Plus, Sparkles, Timer, Upload } from "lucide-react";
+import { BookOpen, CalendarClock, ClipboardList, Clock, FileText, Plus, Sparkles, Target, Timer, Trophy, Upload } from "lucide-react";
+import { Card } from "@/components/ui/Card";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Button } from "@/components/ui/Button";
 import type { Chapter, Exam, Flashcard, Homework, Note, StudyAttachment, StudySession, Subject } from "@/lib/types";
@@ -81,24 +82,36 @@ export function SubjectDetail({ subject, exams, chapters, studySessions, homewor
           : "No upcoming exam scheduled"}
       </p>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+        <Card>
+          <div className="flex items-center gap-2 mb-2">
+            <Target size={16} className="text-tuscan" />
+            <h4 className="text-h3">Readiness</h4>
+          </div>
           <p className="text-display">{readiness}%</p>
-          <p className="text-caption text-graphite">Readiness</p>
-          <ProgressBar percent={readiness} className="mt-1" />
-        </div>
-        <div>
+          <ProgressBar percent={readiness} className="mt-2" />
+        </Card>
+        <Card>
+          <div className="flex items-center gap-2 mb-2">
+            <BookOpen size={16} className="text-info" />
+            <h4 className="text-h3">Chapters</h4>
+          </div>
           <p className="text-display">{chapters.length}</p>
-          <p className="text-caption text-graphite">Chapters</p>
-        </div>
-        <div>
+        </Card>
+        <Card>
+          <div className="flex items-center gap-2 mb-2">
+            <Clock size={16} className="text-tuscan" />
+            <h4 className="text-h3">Hours logged</h4>
+          </div>
           <p className="text-display">{hoursLogged}h</p>
-          <p className="text-caption text-graphite">Hours logged</p>
-        </div>
-        <div>
+        </Card>
+        <Card>
+          <div className="flex items-center gap-2 mb-2">
+            <Trophy size={16} className="text-success" />
+            <h4 className="text-h3">Mastered</h4>
+          </div>
           <p className="text-display">{mastery}%</p>
-          <p className="text-caption text-graphite">Mastered</p>
-        </div>
+        </Card>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap mb-4">

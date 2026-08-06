@@ -154,6 +154,7 @@ export interface Homework {
   chapter_id: string | null;
   title: string;
   description: string | null;
+  given_at: string | null;
   due_at: string | null;
   priority: Priority;
   status: HomeworkStatus;
